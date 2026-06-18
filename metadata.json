@@ -1,0 +1,6 @@
+{
+  "name": "AI-Powered Digital Marketing CRM",
+  "description": "End-to-end digital marketing CRM and funnel architect powered by Gemini AI, featuring niche custom copy generators, conversion-focused analytics, and ad, email, and landing page sequence builders.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

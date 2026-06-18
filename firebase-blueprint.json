@@ -1,0 +1,38 @@
+{
+  "database": {
+    "firestore": {
+      "collections": {
+        "contacts": {
+          "fields": {
+            "id": { "type": "string", "required": true },
+            "name": { "type": "string", "required": true },
+            "email": { "type": "string", "required": true },
+            "phone": { "type": "string", "required": true },
+            "company": { "type": "string", "required": true },
+            "dealValue": { "type": "number", "required": true },
+            "tags": { "type": "array", "items": { "type": "string" }, "required": true },
+            "funnelStage": { "type": "string", "required": true },
+            "lastActivity": { "type": "string", "required": true },
+            "leadSource": { "type": "string", "required": true },
+            "notes": { "type": "string", "required": true }
+          }
+        },
+        "funnels": {
+          "fields": {
+            "id": { "type": "string", "required": true },
+            "nicheId": { "type": "string", "required": true },
+            "nicheName": { "type": "string", "required": true },
+            "product": { "type": "string", "required": true },
+            "avatar": { "type": "string", "required": true },
+            "painPoint": { "type": "string", "required": true },
+            "desiredOutcome": { "type": "string", "required": true },
+            "mainChannel": { "type": "string", "required": true },
+            "pricePoint": { "type": "string", "required": true },
+            "createdAt": { "type": "string", "required": true },
+            "status": { "type": "string", "required": true }
+          }
+        }
+      }
+    }
+  }
+}
