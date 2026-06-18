@@ -70,6 +70,7 @@ import { downloadCRMLeadsCSV, calculateLeadScore } from './utils/crmUtils';
 import { LeadScoreBadge } from './components/LeadScoreBadge';
 import { ActivityLogsPanel } from './components/ActivityLogsPanel';
 import { StripeMockCheckout } from './components/StripeMockCheckout';
+import AICopywriterStudio from './components/AICopywriterStudio';
 
 export default function App() {
   // Navigation & Core List States
@@ -850,6 +851,19 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
               </button>
 
               <button
+                onClick={() => setActiveTab('aiCopywriter')}
+                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  activeTab === 'aiCopywriter' 
+                    ? 'bg-emerald-50 text-emerald-700 border-l-4 border-emerald-600 font-semibold' 
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                }`}
+                id="tab-ai-copywriter"
+              >
+                <FileText className="w-4 h-4" />
+                <span>AI Copywriter Studio</span>
+              </button>
+
+              <button
                 onClick={() => setActiveTab('contacts')}
                 className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   activeTab === 'contacts' 
@@ -1625,6 +1639,11 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
               </div>
 
             </div>
+          )}
+
+          {/* TAB: AI COPYWRITER STUDIO */}
+          {activeTab === 'aiCopywriter' && (
+            <AICopywriterStudio activeFunnel={currentActiveFunnel} />
           )}
 
           {/* TAB 4: CRM LEADS PIPELINE */}
