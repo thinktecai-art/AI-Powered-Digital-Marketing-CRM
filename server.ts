@@ -1053,6 +1053,516 @@ Audience: ${avatar}
 Primary Tone: ${tone}`;
         break;
 
+      case "communication":
+        systemInstruction = `You are an elite communication copywriter and conversation architect. Generate complete communication AI templates:
+- 1 Voice call outbound script with intro, core pitch, handled objections, and a soft CTA.
+- 1 Live Chat widget conversational qualifying flow with welcome message, three qualifying questions, and a fallback response.
+- 1 SMS template and 1 Social media DM template for custom follow-ups.
+- 1 Missed-call text-back SMS auto-response.
+- 1 Webinar dynamic registration page structure with title, bullet points, and follow-up webinar email template.
+
+You MUST respond strictly in valid, parseable JSON conforming to this schema. Do not output markdown around the JSON, only the raw parseable JSON object.
+
+JSON Schema:
+{
+  "voiceScript": {
+    "intro": "string",
+    "pitch": "string",
+    "objections": ["string"],
+    "cta": "string"
+  },
+  "chatFlow": {
+    "welcomeMessage": "string",
+    "qualifyingQuestions": ["string"],
+    "fallbackMessage": "string"
+  },
+  "smsDM": {
+    "smsPromo": "string",
+    "smsReminder": "string",
+    "dmTemplate": "string"
+  },
+  "missedCallTextBack": {
+    "smsText": "string",
+    "followupDelay": "string"
+  },
+  "webinarFunnel": {
+    "registrationHeadline": "string",
+    "agendaPoints": ["string"],
+    "postWebinarEmail": "string"
+  }
+}`;
+        userPrompt = `Create an advanced multi-channel AI communication pack for:
+Product: ${product_name}
+Category: ${category}
+Audience: ${avatar}
+Pain Point: ${pain_point}
+Desired Outcome: ${desired_outcome}
+Brand Tone: ${tone}
+Option/Offer Name: ${custom_offer}`;
+        break;
+
+      case "webinar_funnel":
+        systemInstruction = `You are an elite high-ticket webinar funnel architect and conversion copywriter.
+Generate a complete, fully detailed webinar marketing funnel modeled strictly around psychological urgency and high-ticket sales mechanisms.
+
+Your response MUST be strictly valid, parseable JSON conforming to this schema:
+{
+  "registrationPage": {
+    "headline": "string (Compelling benefit-driven headline for the webinar registration page)",
+    "subhead": "string (Intriguing outline of the secret or core breakthrough)",
+    "bulletPoints": ["string (3-4 highly specific bullet points outlining what attendees will learn)"],
+    "ctaText": "string (Action-oriented CTA button text, e.g. 'Secure Private Broadcast Access Now')"
+  },
+  "confirmationEmail": {
+    "subject": "string (Exciting subject confirming registration)",
+    "body": "string (Friendly confirmation body with details, workbook mention, and adding to calendar advice)"
+  },
+  "reminderEmail1Hour": {
+    "subject": "string (Urgent subject pointing out 1-hour count)",
+    "body": "string (Brief body building curiosity and providing access link)"
+  },
+  "reminderEmail10Min": {
+    "subject": "string (In-the-moment subject with starting notification)",
+    "body": "string (High-priority call to action to join immediately)"
+  },
+  "scriptOutline": {
+    "hook": "string (0-5 minute hook/intro script setting expectations)",
+    "contentSections": ["string (3 key valuable shifts or training sections explained concisely)"],
+    "pitchTransition": "string (Smooth logical shift from free training into presentation of the offer/solution)",
+    "offerPitch": "string (Comprehensive overview of the offer, pricing model, bonuses, and limited slots)"
+  },
+  "postWebinarPitchEmail": {
+    "subject": "string (Post-training follow-up pitch subject)",
+    "body": "string (Email text summarizing the training value, introducing the main offer limit, and linking directly)"
+  },
+  "replayPage": {
+    "headline": "string (Replay page title with urgency)",
+    "summary": "string (Brief video recap copy summarizing why this training is expiring soon)",
+    "coreCallToAction": "string (CTA linking to the premium checkout / application form)"
+  }
+}`;
+        userPrompt = `Generate a high-converting, premium webinar funnel copy deck for:
+Webinar Topic/Product: ${product_name}
+Niche Category: ${category}
+Target Audience / Avatar: ${avatar}
+Core Offer / Incentive: ${custom_offer}
+Primary Pain Point: ${pain_point}
+Desired Outcome: ${desired_outcome}
+Desired Tone: ${tone}
+
+Ensure the output contains fully articulated paragraphs, realistic variables, and pristine copywriting structure.`;
+        break;
+
+      case "sales_enablement":
+        systemInstruction = `You are a sales enablement copywriter. Generate practical B2B and high-ticket sales assets:
+- 1 outbound Prospecting Outreach email focusing on value proposition and clear booking CTA.
+- 1 physical/digital QR code engagement sequence page headers, offer, and user activation instructions.
+- 1 follow-up sequence for physical/digital business cards (e.g. business card scanner scanner capture) that links to a scheduling widget.
+
+You MUST respond strictly in valid, parseable JSON conforming to this schema. Do not output markdown around the JSON, only the raw parseable JSON object.
+
+JSON Schema:
+{
+  "prospectingOutreach": {
+    "subject": "string",
+    "intro": "string",
+    "valueProposition": "string",
+    "cta": "string"
+  },
+  "qrCodeFlow": {
+    "welcomeHeader": "string",
+    "incentiveOffer": "string",
+    "redemptionInstructions": "string"
+  },
+  "bizCardFollowUp": {
+    "subject": "string",
+    "body": "string",
+    "calendarCta": "string"
+  }
+}`;
+        userPrompt = `Generate dedicated high-performance sales enablement templates for:
+Product: ${product_name}
+Audience: ${avatar}
+Value: ${desired_outcome}
+Offer: ${custom_offer}`;
+        break;
+
+      case "reputation_cx":
+        systemInstruction = `You are a reputation manager and CX content architect. Generate templates to increase user trust and review retention:
+- 1 Review Request outreach email containing a high-converting explanation and simple incentive.
+- 1 Template replying to positive feedback (4-5 stars), and 1 reply template responding carefully to any negative reviews (1-2 stars) to turn around client frustrations.
+- 1 dynamic Document/Contract Signing instructional text sequence with step-by-step guidance for clients.
+
+You MUST respond strictly in valid, parseable JSON conforming to this schema. Do not output markdown around the JSON, only the raw parseable JSON object.
+
+JSON Schema:
+{
+  "reviewRequest": {
+    "subject": "string",
+    "body": "string",
+    "incentive": "string"
+  },
+  "reputationReplies": {
+    "positiveReviewReply": "string",
+    "negativeReviewReply": "string"
+  },
+  "documentSigning": {
+    "instructions": "string",
+    "stepByStep": ["string"],
+    "contractCta": "string"
+  }
+}`;
+        userPrompt = `Generate a customer trust, reputation response, and document signing guide for:
+Product Name: ${product_name}
+Target Audience: ${avatar}
+Expected Benefit: ${desired_outcome}
+Pain Point to resolve: ${pain_point}`;
+        break;
+
+      case "operations":
+        systemInstruction = `You are an operations-focused CRM automated messaging strategist. Generate system templates that trigger actions:
+- 1 Booking & Appointment confirmation flow layout with reschedule terms.
+- 2 Calendar reminder templates (a 24-hour warning SMS and a final 1-hour nudge SMS).
+- 3 Pipeline Stage transition SMS/email template triggers (Lead-to-Qualified, Qualified-to-Proposal, Proposal-to-Closed-Won).
+
+You MUST respond strictly in valid, parseable JSON conforming to this schema. Do not output markdown around the JSON, only the raw parseable JSON object.
+
+JSON Schema:
+{
+  "bookingFlow": {
+    "confirmationMessage": "string",
+    "reschedulePolicy": "string"
+  },
+  "calendarReminders": {
+    "twentyFourHourSms": "string",
+    "oneHourSms": "string"
+  },
+  "pipelineStageMessaging": {
+    "leadToQualified": "string",
+    "qualifiedToProposal": "string",
+    "proposalToClosed": "string"
+  }
+}`;
+        userPrompt = `Generate the dynamic operational setup texts for:
+Product Name: ${product_name}
+Target Audience: ${avatar}
+Preferred Offer: ${custom_offer}`;
+        break;
+
+      case "voice_script":
+        systemInstruction = `You are a conversation architect for high-converting outbound/inbound Voice AI sales agents.
+Generate a structured, natural-sounding, and conversion-focused Voice AI simulation script.
+
+Your response MUST be strictly valid, parseable JSON conforming to this schema:
+{
+  "greeting": "string",
+  "qualification": ["string"],
+  "valuePitch": "string",
+  "objections": [
+    { "objection": "string", "handler": "string" }
+  ],
+  "cta": "string",
+  "fallback": "string"
+}`;
+        userPrompt = `Generate a Voice AI call script for:
+Business Name: ${product_name}
+Target Offer: ${custom_offer}
+Target Audience / Avatar: ${avatar}
+Goal / Primary Objective: ${desired_outcome}
+
+The script should include:
+- A warm personal greeting
+- 2-3 natural qualification questions
+- A concise, high-impact value pitch
+- 2 common hypothetical objections handled professionally
+- A clear Call to Action (CTA) matching the goal
+- And an empathetic fallback option if the user is hesitant or unsure.`;
+        break;
+
+      case "quiz_survey":
+        systemInstruction = `You are a conversation, landing page conversion, and lead qualification architect.
+Generate a structured, interactive, and highly optimized diagnostics quiz / lead-qualification survey tailored specifically to convert visitors into booked sales leads for the given business.
+
+Your response MUST be strictly valid, parseable JSON conforming to this schema:
+{
+  "title": "string (The title of the Quiz/Survey, e.g., 'B2B Sales Growth Diagnostic')",
+  "description": "string (A compelling subtitle/description promoting the value exchange or complimentary audit)",
+  "questions": [
+    {
+      "id": "string (unique identifier like q1, q2, etc)",
+      "question": "string (The questionnaire text)",
+      "type": "multiple-choice | short-text | scale",
+      "options": ["string (3-5 options; only required if type is multiple-choice or scale)"],
+      "scoring": [
+        { "option": "string", "score": 5 }
+      ],
+      "segmentationTag": "string (a tag assigned to leads answering this way, e.g. 'high-intent-mid-market', 'low-budget-freelancer')"
+    }
+  ],
+  "results": [
+    {
+      "range": "string (scoring range, e.g. '0-15' or '16-30')",
+      "segment": "string (The segment name, e.g., 'Early Stage Struggling' or 'Hyper-growth Enterprise')",
+      "heading": "string (Header for the outcome section)",
+      "summary": "string (Personalized diagnostic result write-up explaining their status based on score)"
+    }
+  ],
+  "recommendedAction": "string (The primary CTA recommendation for the prospect)"
+}`;
+        userPrompt = `Generate a high-converting lead qualification quiz/survey for:
+Purpose/Product: ${product_name}
+Target Audience / Avatar: ${avatar}
+Target Offer: ${custom_offer}
+Desired Outcome: ${desired_outcome}
+
+The quiz/survey should:
+- Have between 5 to 10 highly strategic qualification questions (asking about pain points, volume, timing, budget).
+- Mix types: include multiple-choice, short-text (input fields), and scale options (e.g., rating from 1 to 5 or 1 to 10).
+- Assign scoring logic to multiple-choice/scale answers to map to different final segments.
+- Set descriptive lead segmentation tags.
+- Offer custom-styled mock results mapped to ranges (e.g. low score, medium score, high score) with personalized breakdowns.`;
+        break;
+
+      case "conversational_chat":
+        systemInstruction = `You are an elite conversational AI prompt engineer and conversation designer.
+Generate a complete, high-converting, and dynamic Conversational AI Chat Flow script conforming to the user's business objective.
+
+The conversation MUST follow a strict professional structure:
+1. Greeting: A highly stylized, personalized initial bot welcome message.
+2. 3 qualification questions: Exactly 3 strategic qualification questions to evaluate the user's intent. Each question must include distinct multiple-choice options and personalized branching follow-up responses based on what option is selected.
+3. Offer Presentation: A highly persuasive offer presentation summarizing the core value and addressing the target user profile.
+4. Booking CTA: An urgent call-to-action directing them to reserve a slot.
+5. Human Handoff Message: An empathetic backup handoff message used when requested or when encountering any unhandled fallback scenarios.
+
+You MUST respond strictly in valid, parseable JSON conforming to this schema. No markdown formatting, conversational intros, or code block markers.
+
+JSON Schema:
+{
+  "greeting": "string (Compelling initial welcome/greeting hook)",
+  "questions": [
+    {
+      "id": "string (unique ID like q1, q2, q3)",
+      "question": "string (The qualification question text)",
+      "options": ["string (Option A text)", "string (Option B text)", "string (Option C text)"],
+      "branchingResponses": {
+        "A": "string (Response if Option A is selected)",
+        "B": "string (Response if Option B is selected)",
+        "C": "string (Response if Option C is selected)"
+      }
+    }
+  ],
+  "offerPresentation": {
+    "headline": "string (Compelling offer presentation headline)",
+    "bullets": ["string (Value bullet 1)", "string (Value bullet 2)", "string (Value bullet 3)"],
+    "ctaText": "string (The core call to action text, e.g., 'Claim Your Audit Slot Now')"
+  },
+  "bookingCta": "string (Direct scheduling invite instruction)",
+  "handoffMessage": "string (Warm and natural human agent backup handoff statement)"
+}`;
+        userPrompt = `Generate a Conversational AI Chat Flow script for:
+Business / Product: ${product_name}
+Goal / Objective: ${desired_outcome || 'qualify and book high-intent partners'}
+Niche Category: ${category}
+Target Audience Profile: ${avatar}
+Core Offer / Incentive: ${custom_offer}
+Primary Pain Point to Bypass: ${pain_point}
+
+Ensure the branching responses feel deeply authentic, conversational, and tailored to the choice.`;
+        break;
+
+      case "call_tracking": {
+        const callType = inputs.call_type || "missed";
+        const business = inputs.business || product_name;
+        const offer = inputs.offer || custom_offer;
+
+        systemInstruction = `You are an elite customer retention specialist and direct-response sequence copywriter.
+Generate call tracking follow-up messages for active pipeline integrations.
+The customer has a ${callType} call status.
+
+You MUST respond strictly in valid, parseable JSON conforming to this schema. Do not output markdown around the JSON, only the raw parseable JSON object.
+
+JSON Schema:
+{
+  "smsFollowUp": "string (Short, punchy, conversion-focused SMS follow-up with friendly tone, mentioning the ${callType} call from ${business} and the special offer: ${offer})",
+  "emailFollowUp": {
+    "subject": "string (Subject line for the follow-up email)",
+    "body": "string (The formatted email body incorporating ${business} and promoting the offer: ${offer} for a ${callType} call context, include placeholders like [First Name] and [Meeting Link])"
+  },
+  "voicemailScript": "string (Natural script for a warm voice voicemail message or callback template relating to the ${callType} call from ${business} and the offer: ${offer})"
+}`;
+        userPrompt = `Generate follow-up messages for a ${callType} call setup.
+Business Name: ${business}
+Representative Offer: ${offer}
+
+The SMS follow-up should prompt immediate response over text.
+The Email follow-up should be professional yet warm, detailing the benefit of the offer.
+The Voicemail script should sound organic, dynamic, and easy to speak naturally.`;
+        break;
+      }
+
+      case "inbound_responder": {
+        const platform = inputs.platform || "Instagram";
+        const goal = inputs.goal || desired_outcome || "schedule qualified appointments";
+        const business = inputs.business || product_name;
+        const offer = inputs.offer || custom_offer;
+        const bookingLink = inputs.booking_link || "https://calendly.com/your-business/slot";
+
+        systemInstruction = `You are an elite conversational direct-response automation specialist.
+Generate an automated inbound messaging responder campaign tailored specifically for the ${platform} platform.
+The primary marketing campaign goal is: ${goal}.
+
+You MUST respond strictly in valid, parseable JSON conforming to this schema. Do not output markdown around the JSON, only the raw parseable JSON object.
+
+JSON Schema:
+{
+  "instantReply": "string (The immediate automated auto-reply triggered when a customer DMs or texts. Must be friendly, capture attention, mention they are talking to ${business}, and acknowledge the channel context for ${platform})",
+  "qualificationQuestion": "string (A natural dynamic conversational question that helps pre-qualify the lead based on their bottleneck or intent related to ${goal})",
+  "offerCta": "string (A punchy conversational pitch describing the special incentive offer: ${offer})",
+  "bookingLinkMessage": "string (A warm call-to-action message containing the scheduling resource link: ${bookingLink})"
+}`;
+        userPrompt = `Generate inbound automated responder sequences for ${platform}.
+Business/Brand Name: ${business}
+Campaign Objective/Goal: ${goal}
+Incentive Offer: ${offer}
+Link to Schedule: ${bookingLink}
+
+Make sure the copy is custom-designed for ${platform} user behavior (e.g. use fitting emojis, text lengths, hashtags or DM-style brevity where appropriate). Ensure high response probability.`;
+        break;
+      }
+
+      case "social_calendar": {
+        const business = inputs.business || product_name;
+        const audience = inputs.avatar || avatar;
+        const platforms = inputs.platform_focus || "TikTok, Instagram, LinkedIn";
+        systemInstruction = `You are a social media copywriter and branding manager. Generate a high-performance 7-day social media content calendar (return a list of exactly 7 days of highly detailed templates to ensure depth, quality, and complete compliance within token constraints):
+        
+        You MUST respond strictly in valid, parseable JSON conforming to this schema. Do not output markdown around the JSON, only the raw parseable JSON object.
+        
+        JSON Schema:
+        {
+          "calendar": [
+            {
+              "day": number,
+              "platform": "string",
+              "postIdea": "string",
+              "caption": "string",
+              "cta": "string",
+              "hashtags": ["string"]
+            }
+          ]
+        }`;
+        userPrompt = `Generate a robust 7-day social media content calendar for:
+        Business/Product: ${business}
+        Audience Avatar: ${audience}
+        Target Platforms: ${platforms}
+        Brand Tone: ${tone}`;
+        break;
+      }
+
+      case "outreach_scripts": {
+        const audience = inputs.avatar || avatar;
+        const offer = inputs.custom_offer || custom_offer;
+        const channel = inputs.channel || "email";
+        systemInstruction = `You are an elite B2B prospecting outreach manager. Generate hyper-personalized outreach scripts for ${channel}:
+        - 3 highly creative outreach variations.
+        - 1 follow-up message.
+        - 1 high-friction bump message (gentle re-engagement nudge).
+        
+        You MUST respond strictly in valid, parseable JSON conforming to this schema. Do not output markdown around the JSON, only the raw parseable JSON object.
+        
+        JSON Schema:
+        {
+          "variations": [
+            { "title": "string (e.g., "Variation 1: Direct Value")", "subject": "string", "body": "string" }
+          ],
+          "followup": { "subject": "string", "body": "string" },
+          "bump": { "subject": "string", "body": "string" }
+        }`;
+        userPrompt = `Generate premium outbound outreach templates for:
+        Preferred Channel: ${channel}
+        Target Avatar: ${audience}
+        Incentive Offer: ${offer}
+        Brand Tone: ${tone}`;
+        break;
+      }
+
+      case "nurture_sequence": {
+        const business = inputs.business || product_name;
+        const offer = inputs.custom_offer || custom_offer;
+        const audience = inputs.avatar || avatar;
+        systemInstruction = `You are a CRM lifecycle retention architect. Generate a highly persuasive 5-message automated nurture sequence of 3 rich emails and 2 punchy SMS messages:
+        
+        You MUST respond strictly in valid, parseable JSON conforming to this schema. Do not output markdown around the JSON, only the raw parseable JSON object.
+        
+        JSON Schema:
+        {
+          "emails": [
+            { "step": "string (e.g., "Email 1: The Authority Hook")", "subject": "string", "body": "string" }
+          ],
+          "smsMessages": [
+            { "step": "string (e.g., "SMS 4: Fast Deadline Nudge")", "body": "string" }
+          ]
+        }`;
+        userPrompt = `Generate 5 high-converting nurture sequences for:
+        Business Name: ${business}
+        Target Avatar: ${audience}
+        Preferred Offer: ${offer}`;
+        break;
+      }
+
+      case "onboarding_content": {
+        const business = inputs.business || product_name;
+        const userType = inputs.user_type || "client";
+        systemInstruction = `You are a customer success and mobile UX copywriter. Generate professional onboarding content for our white-labeled mobile app targeted at ${userType} users:
+        - 1 warm, welcoming personalized in-app card message.
+        - 1 clean feature overview summary.
+        - 1 Actionable first steps onboarding checklist (4-5 steps).
+        - 1 Call to Action to complete device setup.
+        
+        You MUST respond strictly in valid, parseable JSON conforming to this schema. Do not output markdown around the JSON, only the raw parseable JSON object.
+        
+        JSON Schema:
+        {
+          "welcomeMessage": "string",
+          "featureOverview": [
+            { "title": "string", "desc": "string" }
+          ],
+          "checklist": ["string"],
+          "cta": "string"
+        }`;
+        userPrompt = `Generate application setup onboarding content for:
+        Business Partner: ${business}
+        End-user Profile: ${userType}
+        Desired Outcome: ${desired_outcome}`;
+        break;
+      }
+
+      case "community_execution": {
+        const audience = inputs.community_type || avatar || "Sovereign consultants";
+        const goal = inputs.goal || desired_outcome || "achieve sustainable growth and retainers";
+        systemInstruction = `You are a high-ticket community strategist and peer engagement architect. Generate an elite community-driven execution framework to drive activation and user retention:
+        - 1 list of weekly challenges (3 items).
+        - 1 accountability loops action plan.
+        - 2 highly engaging peer-to-peer prompt ideas.
+        - 1 monthly execution sprint schedule.
+        - 1 robust, clean success tracking system proposal.
+        
+        You MUST respond strictly in valid, parseable JSON conforming to this schema. Do not output markdown around the JSON, only the raw parseable JSON object.
+        
+        JSON Schema:
+        {
+          "weeklyChallenges": ["string"],
+          "accountabilityLoops": "string",
+          "peerPrompts": ["string"],
+          "monthlySprintPlan": "string",
+          "successTrackingSystem": "string"
+        }`;
+        userPrompt = `Generate our custom community execution layout for:
+        Community Type: ${audience}
+        Target Goal: ${goal}`;
+        break;
+      }
+
       default:
         return res.status(400).json({ error: "Unsupported toolType requested." });
     }
@@ -1386,6 +1896,547 @@ Primary Tone: ${tone}`;
           { "step": 3, "phase": "E-Commerce Optimization", "tool": "Visual Concepts & PDP Builder", "prompt": `Draft a full Product Details Page long storytelling narrative, highlighting eco-luxe Bamboo Silk and clinical sea buckthorn certifications.` },
           { "step": 4, "phase": "Measurement & Scaling", "tool": "Campaign Enforcer & Analyst", "prompt": `Prepare 3 specific A/B tests to optimize low email open rates and reduce paid ads overall customer acquisition cost.` }
         ]
+      };
+    } else if (toolType === "communication") {
+      mockData = {
+        "voiceScript": {
+          "intro": `Hi [Contact Name], this is Alex with the ${product_name} team. I noticed you recently explored our conversion and engagement resources.`,
+          "pitch": `We specialize in helping ${avatar} overcome ${pain_point}. Our automated system is custom-built to deliver reliable, stress-free ${desired_outcome} in less than 14 days, without requiring complex setup.`,
+          "objections": [
+            "Obj: 'I don't have enough time for setup.' Ans: Our onboarding is fully handled in under 5 minutes by our technical support agents.",
+            "Obj: 'Is this secure and proven?' Ans: Yes, we are backed by Stripe secure payment protocols and have over 15,000 satisfied members."
+          ],
+          "cta": "Would you be open to a brief 10-minute demo this Thursday at 2 PM to explore a tailored playbook?"
+        },
+        "chatFlow": {
+          "welcomeMessage": `👋 Welcome! Looking to replace ${pain_point.toLowerCase()} with a sleek, automated solution? I can help you find the perfect fit!`,
+          "qualifyingQuestions": [
+            "Are you primarily looking to save hours of manual work, or scale your conversion metrics?",
+            "What is your target timeline to see results (1 week, 2 weeks, or a month)?",
+            `What is the best email to send your customized ${product_name} roadmap blueprint to?`
+          ],
+          "fallbackMessage": "Got it! Realizing your goals is our priority. Let me connect you directly to our live growth coach now."
+        },
+        "smsDM": {
+          "smsPromo": `🔥 Quick message from ${product_name}! Use coupon "luxurycode50" in the next 24 hours to secure $50 off your customized starter set. Redeem here: [LINK]`,
+          "smsReminder": `Hey [Name]! Just a gentle reminder that your personalized styling session begins in 15 minutes. See you here: [LINK]`,
+          "dmTemplate": `Hey [Username]! Appreciate you checking out our latest post on ${desired_outcome}. We crafted a direct guide specifically for ${avatar} to bypass ${pain_point.toLowerCase()}. Let me know if you want me to drop the free access link in your inbox! 📩`
+        },
+        "missedCallTextBack": {
+          "smsText": `Hi! Sorry we missed your call. We're currently helping another partner achieve ${desired_outcome}. Is there something specific about ${product_name} we can answer via text? 💬`,
+          "followupDelay": "Instant (triggered 45 seconds after missed inbound call)"
+        },
+        "webinarFunnel": {
+          "registrationHeadline": `Bypass ${pain_point} and Unlock Masterful CRM Conversion Speed`,
+          "agendaPoints": [
+            `Why traditional slow pipelines leak over fifty percent of warm leads`,
+            `The 3-step active routine Sarah used to reclaim 12 hours every single month`,
+            "Live demonstration of our automated client scoring and Stripe integration"
+          ],
+          "postWebinarEmail": `Subject: The replay inside: How ${avatar} streamline outreach\n\nHi [Name],\n\nThank you for joining our live masterclass! As promised, here is the replay link along with your $50 launcher coupon.\n\nDon't let manual choice fatigue slow down your group. Let's make this year your most automated and conversion-driven yet!\n\nWarmly,\n[Sender Name]`
+        }
+      };
+    } else if (toolType === "webinar_funnel") {
+      mockData = {
+        "registrationPage": {
+          "headline": `How ${avatar} Can Bypass ${pain_point || 'High CPA'} and Scale to ${desired_outcome || 'Consistent Growth'}`,
+          "subhead": `A specialized masterclass to automate your scaling workflow and deploy high-converting brand audits in under 15 minutes.`,
+          "bulletPoints": [
+            `The EXACT 3-step automation blueprint Sarah used to replace manual qualification with AI-powered diagnostics.`,
+            `How to bulletproof your CRM routing to target qualified high-budget partnerships while reclaiming 12+ executive hours each week.`,
+            `The critical pricing mistake that leaks over fifty percent of warm traffic before they convert into booked sales calls.`
+          ],
+          "ctaText": "Secure Private Broadcast Access Now"
+        },
+        "confirmationEmail": {
+          "subject": "🎉 You're Confirmed: Your Custom Optimization Masterclass Details Inside",
+          "body": `Hi [Name],\n\nYou have successfully locked in your private broadcast access to the webinar!\n\nHere are the critical details you need to save:\n- Topic: How to Bypass ${pain_point} & Scale to ${desired_outcome}\n- Private Broadcast Link: [ACCESS_LINK]\n\n👉 ACTION ITEM: Download your complimentary masterclass workbook [WORKBOOK_LINK] so you can follow along with the real-time AI builder exercises. We recommend adding this session to your calendar right now to protect your seat.`
+        },
+        "reminderEmail1Hour": {
+          "subject": "⏳ 1 HOUR to Broadcast: Unlock the Custom Scaling Playbook",
+          "body": `Hi [Name],\n\nWe are starting the private stream in exactly 60 minutes.\n\nGrab a coffee, download the workbook, and prepare your questions for the live interactive Q&A session at the end. We only have 500 lines available on our live server, so make sure to dial in 10 minutes early to secure your slot.\n\nJoin the live broadcast line here: [ACCESS_LINK]`
+        },
+        "reminderEmail10Min": {
+          "subject": "🚨 WE ARE GOING LIVE: Join the Scaling Masterclass Now!",
+          "body": `Hey [Name],\n\nThe webinar room is open and our presentation has just started!\n\nWe are sharing the exact workflow to automate your CRM leads and secure high-value partnerships using the newly launched Sovereign Agency copy models.\n\nClick here to claim your virtual seat instantly: [ACCESS_LINK]`
+        },
+        "scriptOutline": {
+          "hook": "Welcome everybody! If you are a high-ticket specialist or operator trying to serve your target avatar but constantly losing warm traffic to competitive choice-fatigue with high CPA, you are in the exact right place. Over the next 45 minutes, we are lifting the veil on how to easily deploy interactive diagnostics systems that pre-qualify leads on auto-pilot.",
+          "contentSections": [
+            "SECTION 1: Bypassing manual intake bottlenecks - Why requiring lengthy text fields and phone screens kills 50%+ of potential high-value clients.",
+            "SECTION 2: The Scoring Logic Framework - How custom scoring ranges (Low, Medium, High) can tag, categorize, and personalize outcome pages automatically.",
+            "SECTION 3: Integration and Booking - Live walkthrough of syncing submissions into your active CRM pipeline and offering immediate VIP alignment slots."
+          ],
+          "pitchTransition": "Now, you can take what you've learned today and attempt to manually write your own code or integrate disjointed third-party forms. Or, you can choose to skip the line entirely. We have created a fully automated suite specifically tailored for your goals.",
+          "offerPitch": `Introducing our exclusive: ${custom_offer || 'The 15-Minute Pipeline Optimization Blueprint'}. For a limited time, you get completely custom-built qualification modules, elite copywriting access keys, and direct system setup with our head architects. We are offering this premium setup with zero complex onboarding overhead, but we only have 7 implementation slots available for this cohort due to high support quality.`
+        },
+        "postWebinarPitchEmail": {
+          "subject": "🚀 Your complimentary blueprint is expiring (7 slots remaining)",
+          "body": `Hi [Name],\n\nThank you for attending our live masterclass! We had an incredible turnout and the response to our automated conversion modules has been overwhelming.\n\nAs promised, we want to help you secure ${desired_outcome} without any setup headache.\n\nFor the next 48 hours only, you can unlock full access to the ${custom_offer || 'Pipeline Optimization Blueprint'}.\n\n👉 Secure your VIP alignment slot before all slots are claimed: [BOOK_LINK]\n\nWarmly,\n[Sender Name]`
+        },
+        "replayPage": {
+          "headline": "🔴 Broadcast Replay: Bypass High CPA & Scale Your Pipeline On Autopilot",
+          "summary": "Watch this exclusive, high-value training detailing the precise steps to deploy interactive diagnostics that score lead intent. This video replay and associated bonuses will expire in exactly 48 hours.",
+          "coreCallToAction": "Claim Your Complimentary Pipeline Optimization Blueprint Here"
+        }
+      };
+    } else if (toolType === "sales_enablement") {
+      mockData = {
+        "prospectingOutreach": {
+          "subject": `Quick ideas to streamline ${category} outreach`,
+          "intro": `Hi [First Name],\n\nI've been reviewing how fast-growing agencies in the ${category} space coordinate their customer lists, and noticed a common trend.`,
+          "valueProposition": `Most teams are losing up to half of their potential conversions due to ${pain_point}. With ${product_name}, we help teams like yours secure sustainable ${desired_outcome} without complex software integration.`,
+          "cta": "Would you be against a short chat next Tuesday to see if we can unlock a similar 14-day growth transition for your team?"
+        },
+        "qrCodeFlow": {
+          "welcomeHeader": `Scan Successful! Welcome to ${product_name} Portal`,
+          "incentiveOffer": `Claim $50 Off Your Inaugural Starter Capsule Kit`,
+          "redemptionInstructions": "Enter your professional email below to claim your exclusive offline-to-online connector coupon. Code will be instantly applied at Stripe checkout."
+        },
+        "bizCardFollowUp": {
+          "subject": `Great connecting at the summit! Let's sync up`,
+          "body": `Hi [First Name],\n\nIt was excellent meeting you and learning of your current focus on serving ${avatar}.\n\nSince we discussed how to streamline client onboarding and avoid ${pain_point}, I wanted to share this direct link to our optimization scheduler.`,
+          "calendarCta": "Book 15 Minutes on my Live Calendar here: [LINK]"
+        }
+      };
+    } else if (toolType === "reputation_cx") {
+      mockData = {
+        "reviewRequest": {
+          "subject": `How was your experience with ${product_name}? 🌟`,
+          "body": `Hi [Name],\n\nCustomer satisfaction is our ultimate passion. We designed this suite to eliminate ${pain_point}, and we would love to hear if it helped you feel more confident.\n\nCould you spare 60 seconds to share your support journey?`,
+          "incentive": "As a thank you, we will immediately send you a free premium botanical silk travel bag ($45 value) once your feedback is posted."
+        },
+        "reputationReplies": {
+          "positiveReviewReply": `Thank you so much, [Name]! We are thrilled to hear that ${product_name} helped you overcome decision anxiety and achieve sustainable results. Our styling specialists appreciate your continuous support!`,
+          "negativeReviewReply": "Hi [Name], we are deeply sorry that your experience did not meet expectations. We take custom sizing and software reliability seriously. Please contact our VIP care team directly at support@workspace.com so we can make this right immediately."
+        },
+        "documentSigning": {
+          "instructions": "Please review and complete your service agreement securely below to lock in your custom delivery timeline:",
+          "stepByStep": [
+            `Verify your custom sizing and selected package quantities in Section 1.`,
+            "Review our 30-day wear-and-love return guarantee in Section 4.",
+            "Apply your secure digital signature in the green designated box."
+          ],
+          "contractCta": "Sign Document Securely via DocuSign"
+        }
+      };
+    } else if (toolType === "operations") {
+      mockData = {
+        "bookingFlow": {
+          "confirmationMessage": `✅ Booking Confirmed! Your personalized ${product_name} Setup Session is locked in for [Date] at [Time].`,
+          "reschedulePolicy": "Rescheduling is free if requested at least 24 hours prior to your slot. Contact your dedicated success stylist at help@workspace.com."
+        },
+        "calendarReminders": {
+          "twentyFourHourSms": `Reminder: Your ${product_name} consultation is in 24 hours on [Date] at [Time]. We will explore custom solutions to achieve ${desired_outcome}!`,
+          "oneHourSms": `Starting soon! Your styling call begins in 1 hour. Grab a coffee and join here: [LINK]`
+        },
+        "pipelineStageMessaging": {
+          "leadToQualified": `Hi [Name]! Great news: your lead profile is now Qualified. We have assigned a senior consultant to prepare your customized ${category} proposal.`,
+          "qualifiedToProposal": `Your personalized ${product_name} integration proposal is ready! Review the bespoke pricing details and deliverables here: [LINK]`,
+          "proposalToClosed": `🎉 Welcome aboard! Your agreement has been finalized. We are preparing to dispatch your custom package to ${regions}. Onboarding begins today!`
+        }
+      };
+    } else if (toolType === "voice_script") {
+      mockData = {
+        "greeting": `Hi [Contact Name], this is Alex calling from the ${product_name} team. I noticed you recently checked out our resources for ${desired_outcome} and wanted to reach out. Do you have about 2 minutes?`,
+        "qualification": [
+          "Are you currently handling your operations manually, or are you looking to automate systems this quarter?",
+          "What is the biggest barrier keeping you from scaling (e.g. lead follow-up speed, admin overhead, or lack of staff)?"
+        ],
+        "valuePitch": `I completely understand. That's exactly why we built our customized ${custom_offer}. It helps ${avatar} bypass ${pain_point} and scale outreach securely in under 14 days, with zero complex technical setups.`,
+        "objections": [
+          { "objection": "I don't have time to set this up right now.", "handler": "Our dedicated CRM deployment specialists handle 95% of the setup for you. We only need 5 minutes of your input." },
+          { "objection": "Is this secure with existing lead bases?", "handler": "Absolutely. We are SOC2 and Stripe Secure certified, maintaining full encryption audits across all active pipelines." }
+        ],
+        "cta": `If you're open to it, I can secure a free 15-minute diagnostic session for you this week to design your custom roadmap. Would tomorrow afternoon work?`,
+        "fallback": "No worries at all! Let me send you our 10-minute automated workbook to your email so you can check it out on your own page. What's the best email to drop that off?"
+      };
+    } else if (toolType === "quiz_survey") {
+      mockData = {
+        "title": `Accelerated Performance & Scaling Qualification Diagnostic`,
+        "description": `Discover if you qualify for our exclusive complimentary 1-on-1 strategy audit. Takes 90 seconds.`,
+        "questions": [
+          {
+            "id": "q1",
+            "question": `Which best describes your current operations level for ${product_name}?`,
+            "type": "multiple-choice",
+            "options": [
+              "Hobbyist / Pre-Revenue Solo Operator",
+              "Established business with regular customer flow",
+              "Rapidly scaling high-volume enterprise agency"
+            ],
+            "scoring": [
+              { "option": "Hobbyist / Pre-Revenue Solo Operator", "score": 2 },
+              { "option": "Established business with regular customer flow", "score": 6 },
+              { "option": "Rapidly scaling high-volume enterprise agency", "score": 10 }
+            ],
+            "segmentationTag": "hobbyist-pre-rev"
+          },
+          {
+            "id": "q2",
+            "question": `What is your biggest roadblock in targeting ${desired_outcome || 'growth'}?`,
+            "type": "multiple-choice",
+            "options": [
+              "Failing to attract high-intent leads consistently",
+              "Time-consuming manual setup or staff overload",
+              "Low conversion rates on sales calls / checkouts"
+            ],
+            "scoring": [
+              { "option": "Failing to attract high-intent leads consistently", "score": 5 },
+              { "option": "Time-consuming manual setup or staff overload", "score": 8 },
+              { "option": "Low conversion rates on sales calls / checkouts", "score": 7 }
+            ],
+            "segmentationTag": "roadblock-acquisition"
+          },
+          {
+            "id": "q3",
+            "question": "What is your target monthly budget allocation for operations and growth?",
+            "type": "multiple-choice",
+            "options": [
+              "Under $1,000 / month",
+              "$1,000 to $5,000 / month",
+              "Over $5,000 / month"
+            ],
+            "scoring": [
+              { "option": "Under $1,000 / month", "score": 3 },
+              { "option": "$1,000 to $5,000 / month", "score": 7 },
+              { "option": "Over $5,000 / month", "score": 10 }
+            ],
+            "segmentationTag": "budget-qualified"
+          },
+          {
+            "id": "q4",
+            "question": "How quickly are you looking to launch this?",
+            "type": "multiple-choice",
+            "options": [
+              "Immediately (Within the next 7 days)",
+              "This quarter (Next 30-90 days)",
+              "Just gathering data/research right now"
+            ],
+            "scoring": [
+              { "option": "Immediately (Within the next 7 days)", "score": 10 },
+              { "option": "This quarter (Next 30-90 days)", "score": 5 },
+              { "option": "Just gathering data/research right now", "score": 1 }
+            ],
+            "segmentationTag": "timeline-critical"
+          },
+          {
+            "id": "q5",
+            "question": "Rate your current digital conversion speed state (1 = low, 10 = master):",
+            "type": "scale",
+            "options": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
+            "scoring": [
+              { "option": "1", "score": 1 },
+              { "option": "2", "score": 2 },
+              { "option": "3", "score": 3 },
+              { "option": "4", "score": 4 },
+              { "option": "5", "score": 5 },
+              { "option": "6", "score": 6 },
+              { "option": "7", "score": 7 },
+              { "option": "8", "score": 8 },
+              { "option": "9", "score": 9 },
+              { "option": "10", "score": 10 }
+            ],
+            "segmentationTag": "conversion-rating"
+          },
+          {
+            "id": "q6",
+            "question": `Please describe how you currently address your primary ${avatar || 'customer'} audience:`,
+            "type": "short-text",
+            "options": [],
+            "scoring": [],
+            "segmentationTag": "audience-insight"
+          }
+        ],
+        "results": [
+          {
+            "range": "0-15",
+            "segment": "Early Stage Explorer",
+            "heading": "⚠️ Foundations Audit & Resource Blueprint Plan",
+            "summary": "You are currently laying the groundwork. You require standard structured templates, automated guides, and a streamlined blueprint model to stabilize consistent leads before investing heavily in custom systems."
+          },
+          {
+            "range": "16-30",
+            "segment": "Accelerating Operator",
+            "heading": "🚀 Systems Expansion & Dedicated Scaling Model",
+            "summary": "Your business is ready for immediate automation. By implementing standard automated funnels and optimized sales assets, you can scale operations efficiently while removing yourself from the tedious manual workflow."
+          },
+          {
+            "range": "31-50",
+            "segment": "High-Volume Enterprise Leader",
+            "heading": "🏆 Customized Elite Optimization Framework",
+            "summary": "You are a top-tier candidate. Your volume justifies a highly customized strategic deployment to maximize high-ticket conversions and close deals on autopilot. Let's fast-track you onto a dedicated roadmap audit."
+          }
+        ],
+        "recommendedAction": `Based on your diagnostic profile, you are highly eligible for the "${custom_offer}". Claim your complimentary 15-minute alignment audit now!`
+      };
+    } else if (toolType === "conversational_chat") {
+      mockData = {
+        "greeting": `👋 Hi! Welcome to ${product_name} Chat Assistant. Looking to bypass ${pain_point || 'manual workflows'} and start securing consistent ${desired_outcome || 'growth'} on autopilot? We have designed a quick, 60-second interactive custom alignment flow for you. Let's get started!`,
+        "questions": [
+          {
+            "id": "q1",
+            "question": `To better qualify our approach, what is your primary bottleneck or pain point in serving ${avatar || 'your clients'} currently?`,
+            "options": [
+              `Losing too much warm traffic (${pain_point || 'High CPA'})`,
+              "Manual lead routing & booking bottlenecks",
+              "Unstable pipeline with inconsistent sales volume"
+            ],
+            "branchingResponses": {
+              "A": `Understood. Losing warm traffic to ${pain_point || 'choice-fatigue'} is a major leak. We specialize in deploying interactive pre-qualification diagnostics to hold attention.`,
+              "B": "Yes, manual scheduling gaps waste hours. Direct, streamlined CRM automation handles routing instantly.",
+              "C": "Consistency is key. Establishing highly optimized automated nurturing sequences stabilizes booking velocity."
+            }
+          },
+          {
+            "id": "q2",
+            "question": "What is your target digital scaling goal or desired weekly volume?",
+            "options": [
+              "1 to 5 new high-ticket partners weekly",
+              "5 to 10 qualified bookings weekly",
+              "Over 10+ scalable conversions weekly"
+            ],
+            "branchingResponses": {
+              "A": "Excellent. 1 to 5 premium partners weekly provides solid, high-margin foundation before heavy scaling.",
+              "B": "5 to 10 setups weekly is the perfect sweet spot for automated pipeline architectures.",
+              "C": "Over 10 weekly requires robust, multi-stage qualifying models with strict logic rules."
+            }
+          },
+          {
+            "id": "q3",
+            "question": "How quickly are you prepared to deploy these optimization modules?",
+            "options": [
+              "Immediately (Within the next 7 days)",
+              "This month (Next 14-30 days)",
+              "Just researching and mapping strategies right now"
+            ],
+            "branchingResponses": {
+              "A": "Fantastic! Fast execution maximizes competitive advantage in volatile markets.",
+              "B": "Perfect. A 14-to-30 day window gives us ample time to align branding, copy, and webhook integrations.",
+              "C": "Researching is smart. Let's send a 1-page tactical playbook directly to your inbox post-assessment."
+            }
+          }
+        ],
+        "offerPresentation": {
+          "headline": `⭐️ Exclusive Access: Unlock the ${custom_offer || 'Pipeline Blueprint Session'}`,
+          "bullets": [
+            `Instantly deploy custom qualification modules styled perfectly to match your active brand guidelines.`,
+            `Eliminate ${pain_point || 'friction points'} using elite conversion-focused copywriting blueprints.`,
+            `Synchronize captured lead profiles with automatic routing rules inside your main CRM workspace.`
+          ],
+          "ctaText": "Book My Complimentary 15-Minute Alignment Session"
+        },
+        "bookingCta": `Click the live scheduler below to secure your complimentary alignment session. Let's bypass ${pain_point || 'bottlenecks'} and scale to ${desired_outcome || 'success'}!`,
+        "handoffMessage": "Standard voice and chatbot fallback initiated. If you prefer to talk with a live human operator, please type 'Agent' or click the connection line above to patch in our VIP success desk immediately!"
+      };
+    } else if (toolType === "call_tracking") {
+      const callType = inputs.call_type || "missed";
+      const business = inputs.business || product_name;
+      const offer = inputs.offer || custom_offer;
+
+      if (callType === "missed") {
+        mockData = {
+          "smsFollowUp": `Hi! Sorry we missed you just now on our call. This is Alex from ${business}. I wanted to touch base regarding your eligible access to the ${offer}. Do you have 2 minutes to reply via text? 📲`,
+          "emailFollowUp": {
+            "subject": `Sorry we missed you! Quick check-in regarding ${offer} 📞`,
+            "body": `Hi [First Name],\n\nI tried calling you just now from ${business}, but wasn't able to reach you. No worries at all – I know how busy schedules can be!\n\nI was calling to connect about your customized roadmap and see how we can help you activate our exclusive offer: "${offer}".\n\nIf you still want to run through the strategy, feel free to book a direct 15-minute slot on my calendar here:\n[Meeting Link]\n\nAlternatively, just reply to this email or drop me a text message at this number and we can schedule a quick chat.\n\nTalk soon,\n\nAlex\n${business} Team`
+          },
+          "voicemailScript": `Hi [First Name]! This is Alex calling from ${business}. Sorry I missed you – I was reaching out because you qualify for our exclusive offer: "${offer}". I'd love to connect and hand this over. No need to call me back immediately, I will send you a quick text with my schedule link, or you can buzz me back at this number. Hope you have a wonderful rest of your day!`
+        };
+      } else {
+        mockData = {
+          "smsFollowUp": `Thanks for chatting with us just now! This is Alex from ${business}. As promised, here is the direct link to claim your ${offer}: [Meeting Link] 🚀 Let's get started!`,
+          "emailFollowUp": {
+            "subject": `Great connecting with you! Here is your next step for ${offer} ⚡️`,
+            "body": `Hi [First Name],\n\nIt was great speaking with you on our call just now! I really appreciate you taking the time to share your goals and bottlenecks with the team at ${business}.\n\nAs we discussed, I wanted to follow up and send over the details for your custom offer: "${offer}". Our client onboarding specialists are standing by to help you deploy these systems quickly.\n\nTo lock in your session and confirm the deliverables, please use this link to complete your reservation:\n[Meeting Link]\n\nIf you have any questions or need to make any adjustments before we lock in our schedule, feel free to hit reply or call/text this line directly at any time.\n\nBest regards,\n\nAlex\n${business} Team`
+          },
+          "voicemailScript": `Hi [First Name]! This is Alex with ${business}. It was fantastic chatting with you on our call yesterday! I'm leaving a quick message as a friendly follow-up to finalize our next session and ensure you can claim your "${offer}". I've sent the details to your email, but feel free to text or call me back on this line if you have any questions. Talk soon!`
+        };
+      }
+    } else if (toolType === "inbound_responder") {
+      const platform = inputs.platform || "Instagram";
+      const goal = inputs.goal || desired_outcome || "schedule qualified appointments";
+      const business = inputs.business || product_name;
+      const offer = inputs.offer || custom_offer;
+      const bookingLink = inputs.booking_link || "https://calendly.com/your-business/slot";
+
+      mockData = {
+        "instantReply": `Hey there! Welcome to ${business} on ${platform}! 👋 Thanks so much for reaching out. We received your message and our automated desk is ready to help you hit your goal of: "${goal}" instantly!`,
+        "qualificationQuestion": `Quick question to see if we're a great fit: What is currently the biggest bottleneck holding your business back from scaling right now? 📈`,
+        "offerCta": `Got it, that's super common! To help you crush that blocker, we're currently offering our exclusive: "${offer}" 🎁 absolutely free of charge for highly-motivated partners.`,
+        "bookingLinkMessage": `Ready to speed up this setup? Tap the link below to select your customized calendar briefing: \n🔗 ${bookingLink}\n\nLet's get aligned!`
+      };
+    } else if (toolType === "social_calendar") {
+      const business = inputs.business || product_name || "Sovereign Growth Inc.";
+      const audience = inputs.avatar || avatar || "Independent experts and consultants";
+      const platforms = inputs.platform_focus || "TikTok, Instagram, LinkedIn";
+      mockData = {
+        "calendar": [
+          {
+            "day": 1,
+            "platform": "Instagram",
+            "postIdea": "The 'Pricing Trap' Visual Breakdown",
+            "caption": `Let's be honest: charging hourly as a busy consultant is a silent tax on your proficiency. 🧠 The faster and better you get, the less you get paid. It's time to shift from selling labor hours to packaging outcomes.`,
+            "cta": "Read our free Sovereign packaging recipe guide in our bio!",
+            "hashtags": ["ConsultingLife", "PricingMatrix", "AgencyAutomation"]
+          },
+          {
+            "day": 2,
+            "platform": "LinkedIn",
+            "postIdea": "Case Study: Bypassing Manual Schedulers",
+            "caption": `We helped an agency partner save 15+ hours a week of back-and-forth email scheduling simply by adding an interactive pre-qualifying diagnostic to their landing page. Here are the exact 3 steps we used to filter high-ticket leads in real-time.`,
+            "cta": "Click through to read the full B2B pipeline breakdown.",
+            "hashtags": ["LinkedInOrganic", "CRMWorkflow", "B2BSales"]
+          },
+          {
+            "day": 3,
+            "platform": "TikTok / Reels",
+            "postIdea": "A Day in the Life of a Stress-Free Operator",
+            "caption": `When your lead routing is 100% automated, you don't wake up to empty calendars or cold DM pitching. You wake up to qualified alignment briefings scheduled on autopilot.`,
+            "cta": "Tap the link below to deploy this exact funnel model in 14 days.",
+            "hashtags": ["BusinessAutomation", "Funnels", "GrowthMarketing"]
+          },
+          {
+            "day": 4,
+            "platform": "Instagram",
+            "postIdea": "The 3 Questions You MUST Ask on Your Consultation Call",
+            "caption": `Don't waste 45 minutes on a phone call only to find out they have no budget or are just 'researching'. Add structural gates to filter out tire-kickers.`,
+            "cta": "Save this post for your next sales meeting!",
+            "hashtags": ["LeadQualifying", "SovereignAdvisor", "HighTicket"]
+          },
+          {
+            "day": 5,
+            "platform": "LinkedIn",
+            "postIdea": "Why Traditional Retainers Keep You Stated in Scarcity",
+            "caption": `Relying on one or two whale client retainers leaves you highly vulnerable to sudden budget cuts. True peace of mind comes from a predictable, automated stream of inbound opportunities.`,
+            "cta": "DM us 'SYSTEM' to get the Sovereign Pricing PDF sent straight to your inbox.",
+            "hashtags": ["ConsultantStrategy", "RevenueSecurity", "B2B"]
+          },
+          {
+            "day": 6,
+            "platform": "TikTok",
+            "postIdea": "Is Choice Fatigue Holding Your Team Back?",
+            "caption": `Struggling with complicated 12-step workflows blocks your business momentum. Simplify to a single core landing asset and let active AI agents do the nurturing.`,
+            "cta": "Comment 'ACTIVE' for our free workspace blueprint template.",
+            "hashtags": ["TeamEfficiency", "SaaSGrowth", "WorkflowOptimized"]
+          },
+          {
+            "day": 7,
+            "platform": "LinkedIn",
+            "postIdea": "Mindset Shift: Package Outcomes, Not Services",
+            "caption": `Your clients don't want to buy your certifications—they want to buy their own dry basement. Focus on delivering measurable desired outcomes.`,
+            "cta": "Join our upcoming live organic branding webinar this Thursday.",
+            "hashtags": ["ExecutiveMindset", "ScaleFast", "Enterprise"]
+          }
+        ]
+      };
+    } else if (toolType === "outreach_scripts") {
+      const audience = inputs.avatar || avatar || "B2B leaders";
+      const offer = inputs.custom_offer || custom_offer || "Complimentary Systems Audit";
+      const channel = inputs.channel || "email";
+      mockData = {
+        "variations": [
+          {
+            "title": "Variation 1: Direct Value-Exchange",
+            "subject": `Quick ideas to optimize lead acquisition loops for [Company Name] 🧠`,
+            "body": `Hi [First Name],\n\nI’m reaching out because I noticed your team has an incredible focus on serving [Target Audience]. However, many firms in your niche fall into the 'Hourly Trap', keeping them stuck in slow manual delivery cycles.\n\nWe put together a custom resource detailing how similar teams are bypassing this bottleneck to unlock automated high-ticket retainers.\n\nI’d love to send over our ${offer} for your team – no strings attached. Would you be open to checking out a quick 1-page PDF overview?`
+          },
+          {
+            "title": "Variation 2: The Core Bottleneck Pattern",
+            "subject": `Struggling with consistent booking velocity? Here is the blueprint 📈`,
+            "body": `Hi [First Name],\n\nIf you're like most B2B leaders, morning choices are taking forever – especially when trying to maintain an active pipeline while delivering top-tier service.\n\nWe designed a streamlined, pre-qualification chat model that enables consultants to screen leads automatically prior to taking a single phone call.\n\nWe wanted to offer you our: "${offer}" to show you exactly how this would fit into your current systems. Let me know if you would like me to slide the calendar details over.`
+          },
+          {
+            "title": "Variation 3: Peer Case Study Authority",
+            "subject": `How we helped B2B brands automate lead scoring loops ⚡️`,
+            "body": `Hi [First Name],\n\nJust came across your profile and was highly impressed by your team's custom footprint. \n\nWe recently completed a project helping organic agency partners transition from hourly scopes to a $10k+ elite advisory retainer model by upgrading their conversion-focused marketing copy.\n\nAs part of our weekly community outreach, we'd love to run a ${offer} for your brand. Are you available for a brief sync later this week?`
+          }
+        ],
+        "followup": {
+          "subject": "Quick follow-up: Did you receive the systems audit guide?",
+          "body": `Hi [First Name],\n\nJust wanted to make sure this didn't get buried in your inbox! I know schedules can get wild.\n\nIf you're still looking to bypass manual delays and double your margin, our ${offer} is open for your team this week.\n\nLet me know if you would like to run through the custom setup guidelines.`
+        },
+        "bump": {
+          "subject": "Lost in the shuffle? ⏳",
+          "body": `Hi [First Name],\n\nI'll keep this short: I know you've got a lot on your plate. If now isn't the right time to streamline client pre-qualification, no worries at all!\n\nI'll check back in next quarter. In the meantime, feel free to grab our free Sovereign Packaging documentation at your convenience.\n\nAll the best,\n\n[Your Name]`
+        }
+      };
+    } else if (toolType === "nurture_sequence") {
+      const business = inputs.business || product_name || "Sovereign Consulting Group";
+      const offer = inputs.custom_offer || custom_offer || "Sovereign Packaging Blueprint";
+      const audience = inputs.avatar || avatar || "independent consultants";
+      mockData = {
+        "emails": [
+          {
+            "step": "Email 1: The Authority Hook",
+            "subject": `Why charging hourly is holding your consulting practice back 🧠`,
+            "body": `Hi [First Name],\n\nWelcome inside the ${business} ecosystem! We're excited to have you join our community of elite leaders.\n\nLet's cut straight to the chase: if you are still billing clients hourly, you are financially penalized for being fast and skilled. The faster you solve their problem, the less money you make.\n\nThat's why we built our: "${offer}". It teaches you how to shift from labor pricing to outcome pricing, elevating your retainers immediately.\n\nIn tomorrow's email, we'll look at the exact three-step qualifying framework used by top-tier firms to shield their calendars from tire-kickers.\n\nTalk soon,\n\nThe ${business} Team`
+          },
+          {
+            "step": "Email 2: Case Study and Proof",
+            "subject": "How Clara Oswald bypassed morning dressing anxiety and tripled booking velocity ⚡️",
+            "body": `Hi [First Name],\n\nYesterday we discussed outcome pricing. Today, let's look at a real-world example.\n\nOur client Clara was struggling with inconsistent lead flow and spent hours in manual outreach back-and-forth email loops. \n\nBy deploying an interactive pre-qualifying diagnostic survey, she automated 100% of her lead scoring and immediately weeded out low-budget researchers. She signed three premium $10k+ retainers in her first 30 days.\n\nYou can access the same structural model inside our ${offer}.\n\nAre you ready to see how this fits your branding?\n\nBest,\n\nThe ${business} Team`
+          },
+          {
+            "step": "Email 3: The Call to Action (Urgency)",
+            "subject": "Only 3 free Systems Audit slots remaining for this week ⏰",
+            "body": `Hi [First Name],\n\nWe've shared the pricing shift and the qualification blueprint. Now, it's time to execute.\n\nTo help you implement this transition immediately, we're hosting complimentary 1-on-1 strategy briefings this Thursday. Our lead architects will map out your exact value stack and pre-qualification chat flow.\n\nBecause we do these manually, we have only 5 slots available. 3 are already claimed.\n\nClick the link below to select your customized calendar briefing:\n[Booking Link]\n\nLet's get started,\n\nThe ${business} Team`
+          }
+        ],
+        "smsMessages": [
+          {
+            "step": "SMS 4: Direct Follow-up (Nudge)",
+            "body": `Hi [First Name], this is Alex from ${business}. I saw you downloaded our ${offer}! Just wanted to send an automated text to see if you had any questions about the Sovereign packaging formulas. Let me know if you want to grab a quick 10-minute schedule: [Booking Link]`
+          },
+          {
+            "step": "SMS 5: Final Deadline Reminder",
+            "body": `⏰ [First Name], heads up! Our complimentary Systems Audit slots for this week close in 3 hours. Let's map your qualification funnel and double your retention. Secure your spot now: [Booking Link] - Alex, ${business}`
+          }
+        ]
+      };
+    } else if (toolType === "onboarding_content") {
+      const business = inputs.business || product_name || "Sovereign Growth Inc.";
+      const userType = inputs.userType || "client";
+      mockData = {
+        "welcomeMessage": `Welcome aboard the ${business} high-ticket mobile workspace! 📱 We are absolutely thrilled to partner with you to help streamline your delivery pipelines and unlock sustainable client growth. This private secure client portal is your single source of truth.`,
+        "featureOverview": [
+          {
+            "title": "🎯 Pre-Qualified Leads Ledger",
+            "desc": "Track your captured prospects, review active AI scores, and monitor automated outbound sequences in real-time."
+          },
+          {
+            "title": "💬 Conversational Chat Tuning",
+            "desc": "Customize and deploy interactive qualification chatbots directly to your customer-facing landing pages."
+          },
+          {
+            "title": "📊 Storyteller Analytics Engine",
+            "desc": "Access high-fidelity diagnostics reports, review conversion bottlenecks, and receive optimized system guidelines."
+          }
+        ],
+        "checklist": [
+          "Complete your user profile, upload your branding logos, and select your target niche.",
+          "Integrate your live scheduling calendar link (Calendly, Cal.com, or HubSpot).",
+          "Deploy your first pre-qualification chat template to your lead-capture landing page.",
+          "Confirm your secure payment routing credentials to accept program enrollment fees."
+        ],
+        "cta": "Complete App Setup"
+      };
+    } else if (toolType === "community_execution") {
+      const audience = inputs.community_type || avatar || "independent experts";
+      const goal = inputs.goal || desired_outcome || "double monthly enrollment volume";
+      mockData = {
+        "weeklyChallenges": [
+          "Week 1 Challenge: The Retainer Audit - Audit your current service catalog and list your top outcome-based pricing packages.",
+          "Week 2 Challenge: Flow Deployment - Deploy your customized pre-qualification chatbot survey, capturing at least 5 feedback submissions.",
+          "Week 3 Challenge: Direct Outreach Blitz - Reach out to 15 warm prospects using our Variation 1 high-performance B2B templates."
+        ],
+        "accountabilityLoops": "Every Monday morning, community members post their top 3 high-leverage execution goals inside our private peer channel. On Friday afternoon, we host a live 'Wins and Bottlenecks' sprint review where partners celebrate completed milestones and get active diagnostic feedback from our senior coaching team.",
+        "peerPrompts": [
+          "📣 Peer Question: What is currently the single biggest bottleneck you are facing when trying to migrate your clients from hourly billings to five-figure outcome-based retainers?",
+          "📈 Visual Showcase: Take a screenshot of your active lead qualification chat flow landing page and tag 2 peers to get a high-contrast copywriting critique!"
+        ],
+        "monthlySprintPlan": `Our upcoming 30-Day 'Sovereign Retainer' Execution Sprint focuses on helping you structuralize, price, and sell high-ticket Retainer Programs. Over the next 4 weeks, you will attend weekly interactive sprints, complete daily execution benchmarks, and participate in peer accountability pods.`,
+        "successTrackingSystem": "Integrate your customized leader dashboard inside this secure portal. Monitor total community challenges completed, track peer feedback velocity, and watch your active pipeline deal values grow over time in our high-leverage leaderboards."
       };
     }
 

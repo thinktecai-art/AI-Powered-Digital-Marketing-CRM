@@ -9,7 +9,8 @@ export const SUPPORTED_NICHES: Niche[] = [
   { id: 'e-commerce', name: 'E-commerce', description: 'High-margin niche consumer electronics, organic lifestyle gear, pet nutrition memberships' },
   { id: 'saas', name: 'SaaS', description: 'AI business process scaling nodes, integrated lead converters, real-time client intake pipelines' },
   { id: 'coaching', name: 'Coaching', description: 'High-ticket executive mindset calibration, premium agency scaling retreats, design-thinking audits' },
-  { id: 'local services', name: 'Local services', description: 'Precision landscape design, climate smart HVAC mechanics, eco-safe home sanitizing' }
+  { id: 'local services', name: 'Local services', description: 'Precision landscape design, climate smart HVAC mechanics, eco-safe home sanitizing' },
+  { id: 'architecture', name: 'Architecture & Design', description: 'Bespoke custom-home architectural drafts, sustainable design masterplanning & high-concept interior development frameworks' }
 ];
 
 // Perfect preset seed funnel for Coach Niche to satisfy ready-made requirement
