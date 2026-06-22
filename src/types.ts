@@ -25,6 +25,7 @@ export interface Funnel {
   pricePoint: string;
   createdAt: string;
   status: 'Active' | 'Draft' | 'Generating';
+  monthlyRevenueGoal?: number;
 }
 
 export interface Asset {

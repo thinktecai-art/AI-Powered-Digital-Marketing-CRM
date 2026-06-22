@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutDashboard, 
   Sparkles, 
@@ -44,7 +45,10 @@ import {
   Award,
   Instagram,
   Facebook,
-  CreditCard
+  CreditCard,
+  X,
+  Target,
+  PieChart as PieChartIcon
 } from 'lucide-react';
 import { Niche, Funnel, Asset, Contact, FunnelStageType, CRMViewTab, LeadFormElement } from './types';
 import { SUPPORTED_NICHES, SEED_FUNNEL, SEED_ASSETS, INITIAL_CONTACTS } from './seedData';
@@ -70,7 +74,10 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer, 
-  Cell
+  Cell,
+  PieChart,
+  Pie,
+  Legend
 } from 'recharts';
 import { downloadCRMLeadsCSV, calculateLeadScore } from './utils/crmUtils';
 import { LeadScoreBadge } from './components/LeadScoreBadge';
@@ -176,6 +183,7 @@ export default function App() {
   const [generatorOutcome, setGeneratorOutcome] = useState<string>('Unlock sharp mental clarity and dynamic morning routines');
   const [generatorChannel, setGeneratorChannel] = useState<string>('LinkedIn');
   const [generatorPrice, setGeneratorPrice] = useState<string>('$5,000 Package');
+  const [generatorGoal, setGeneratorGoal] = useState<number>(50000);
   const [pricingAlert, setPricingAlert] = useState<string | null>(null);
   
   // Premium System Subscriptions Integration
@@ -224,6 +232,21 @@ export default function App() {
   // Contact Drawer / Add Contact Form State
   const [activeContactId, setActiveContactId] = useState<string>('contact-1');
   const [crmSidebarTab, setCrmSidebarTab] = useState<'add-lead' | 'logs'>('logs');
+  const [crmDisplayMode, setCrmDisplayMode] = useState<'ledger' | 'kanban'>('kanban');
+  const [crmSearchQuery, setCrmSearchQuery] = useState<string>('');
+  const [formValidationErrors, setFormValidationErrors] = useState<{ email?: string; phone?: string }>({});
+  const [draggedOverStage, setDraggedOverStage] = useState<FunnelStageType | null>(null);
+
+  const filteredContacts = contacts.filter(c => {
+    const query = crmSearchQuery.toLowerCase().trim();
+    if (!query) return true;
+    return (
+      (c.name || '').toLowerCase().includes(query) ||
+      (c.company || '').toLowerCase().includes(query) ||
+      (c.leadSource || '').toLowerCase().includes(query)
+    );
+  });
+
   const [newContact, setNewContact] = useState({
     name: '',
     email: '',
@@ -485,6 +508,20 @@ export default function App() {
     });
   };
 
+  // Prepare data representing distribution of leads by their leadSource
+  const getLeadSourceDistributionData = () => {
+    const sourceCounts: Record<string, number> = {};
+    contacts.forEach(c => {
+      const source = c.leadSource || 'Organic Search';
+      sourceCounts[source] = (sourceCounts[source] || 0) + 1;
+    });
+
+    return Object.entries(sourceCounts).map(([name, value]) => ({
+      name,
+      value
+    }));
+  };
+
   // Handler: Generate Funnel via backend Gemini API
   const handleGenerateFunnel = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -521,7 +558,8 @@ export default function App() {
           mainChannel: generatorChannel,
           pricePoint: generatorPrice,
           createdAt: new Date().toISOString(),
-          status: 'Active'
+          status: 'Active',
+          monthlyRevenueGoal: generatorGoal
         };
 
         const parsedAssets: Asset[] = [
@@ -715,10 +753,64 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
     setFormFields(formFields.filter(f => f.id !== id));
   };
 
+  // HTML5 Drag and Drop event handlers for Visual CRM Board
+  const handleDragStart = (e: React.DragEvent, contactId: string) => {
+    e.dataTransfer.setData('text/plain', contactId);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetStage: FunnelStageType) => {
+    e.preventDefault();
+    const contactId = e.dataTransfer.getData('text/plain');
+    if (!contactId) return;
+
+    const contact = contacts.find(c => c.id === contactId);
+    if (contact) {
+      if (contact.funnelStage !== targetStage) {
+        const updated = { 
+          ...contact, 
+          funnelStage: targetStage, 
+          lastActivity: new Date().toISOString() 
+        };
+        // Update state locally for immediate response
+        setContacts(prev => prev.map(c => c.id === contactId ? updated : c));
+        // Persist to Firebase Firestore
+        saveContactToFirestore(updated);
+        // Web notifications
+        sendWebNotification("📌 Stage Reassigned", `Lead "${contact.name}" moved to Stage: ${targetStage}`);
+        setLiveAlerts(prev => [`📌 Reassigned [${contact.name}] to stage [${targetStage}] via Drag & Drop`, ...prev]);
+      }
+    }
+  };
+
   // Form submission: adds manual CRM contacts
   const handleCreateContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newContact.name || !newContact.email) return;
+
+    // Custom Form Validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const cleanPhone = (newContact.phone || '').replace(/\D/g, '');
+    const errors: { email?: string; phone?: string } = {};
+
+    if (!emailRegex.test(newContact.email)) {
+      errors.email = "Please enter a valid email address (e.g., alex@domain.com).";
+    }
+
+    if (newContact.phone) {
+      if (cleanPhone.length < 10 || cleanPhone.length > 15) {
+        errors.phone = "Phone must follow a standard format (at least 10 digits, e.g., +1 (555) 902-1111).";
+      } else if (!/^\+?[\d\s\-\(\)\.]+$/.test(newContact.phone)) {
+        errors.phone = "Phone number contains invalid formatting characters.";
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormValidationErrors(errors);
+      setLiveAlerts(prev => ["⚠️ CRM Enqueue Failed: Validation Errors found in email or phone format.", ...prev]);
+      return;
+    }
+
+    setFormValidationErrors({});
 
     const added: Contact = {
       id: `contact-${Date.now()}`,
@@ -1164,6 +1256,15 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
 
   const currentActiveFunnel = funnels.find(f => f.id === activeFunnelId) || funnels[0];
   const currentActiveAssets = assets.filter(a => a.funnelId === activeFunnelId);
+
+  // Goal calculations on current active funnel
+  const activeFunnelGoal = currentActiveFunnel?.monthlyRevenueGoal || 50000;
+  const actualConvertedRevenue = contacts
+    .filter(c => c.funnelStage === 'Conversion' || c.funnelStage === 'Upsell' || c.funnelStage === 'Retention')
+    .reduce((sum, c) => sum + (c.dealValue || 0), 0);
+  const goalPercentage = activeFunnelGoal > 0 
+    ? Math.min(100, Math.round((actualConvertedRevenue / activeFunnelGoal) * 100)) 
+    : 0;
 
   if (authLoading) {
     return (
@@ -1616,8 +1717,77 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
               )}
 
               {/* CORE PERFORMANCE CHARTS GRID (Replacing Static Metric Cards) */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                 
+                {/* 🎯 CARD 1: MONTHLY REVENUE GOAL PROGRESS */}
+                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-bold font-display text-slate-800 flex items-center gap-1.5">
+                          <Target className="w-4 h-4 text-emerald-600 animate-pulse-slow animate-bounce-slow" /> Revenue Goal Progress
+                        </h3>
+                        <p className="text-[11px] text-slate-400">Monthly goal vs. current closed-deals in pipeline</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-mono font-black text-emerald-700">
+                          {activeFunnelGoal > 0 ? `${goalPercentage}%` : "0%"}
+                        </div>
+                        <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider block">Target Reached</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div>
+                        <div className="flex justify-between text-[11px] font-semibold text-slate-500 mb-1">
+                          <span>Won Revenue</span>
+                          <span className="font-mono text-emerald-600 font-bold">${actualConvertedRevenue.toLocaleString()}</span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-4 relative border border-slate-200 overflow-hidden shadow-inner flex">
+                          <div 
+                            className="bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-600 h-full rounded-full transition-all duration-1000 ease-out shadow-sm"
+                            style={{ width: `${goalPercentage}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-emerald-50/50 rounded-2xl border border-emerald-100/60 space-y-2">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-slate-500 font-medium">For Active Funnel:</span>
+                          <span className="font-bold text-emerald-900 truncate max-w-[120px]" title={currentActiveFunnel?.product || "Default Funnel"}>
+                            {currentActiveFunnel?.product || "Default Funnel"}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] gap-2">
+                          <span className="text-slate-500 font-medium whitespace-nowrap">Monthly Goal ($):</span>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="e.g. 50000"
+                            value={currentActiveFunnel?.monthlyRevenueGoal || ''}
+                            onChange={(e) => {
+                              const val = e.target.value === '' ? undefined : Number(e.target.value);
+                              const updated = { ...currentActiveFunnel, monthlyRevenueGoal: val };
+                              setFunnels(prev => prev.map(f => f.id === currentActiveFunnel?.id ? updated : f));
+                              saveFunnelToFirestore(updated);
+                            }}
+                            className="bg-white border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg px-2 py-1 text-xs text-slate-800 font-bold w-24 text-right outline-none transition-all shadow-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="text-[11px] text-slate-500 bg-slate-50 border border-slate-100/60 p-2.5 rounded-xl flex items-start gap-1.5 leading-snug">
+                        <span className="shrink-0 text-emerald-600 font-bold text-xs mt-0.5">🚀</span>
+                        <p>
+                          {goalPercentage >= 100 
+                            ? "Magnificent! You have officially exceeded your monthly revenue goal for this funnel!" 
+                            : `Achieve $${(Math.max(0, activeFunnelGoal - actualConvertedRevenue)).toLocaleString()} more to smash your goal of $${activeFunnelGoal.toLocaleString()}!`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* 📈 CHART 1: PIPELINE VALUE & LEADS GROWTH OVER TIME */}
                 <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col">
                   <div className="flex items-center justify-between mb-4">
@@ -1697,6 +1867,98 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
+                </div>
+
+                {/* 🍰 CHART 3: LEAD DISTRIBUTION BY SOURCE */}
+                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-sm font-bold font-display text-slate-800 flex items-center gap-1.5">
+                          <PieChartIcon className="w-4 h-4 text-emerald-600" /> Leads by Acquisition Source
+                        </h3>
+                        <p className="text-[11px] text-slate-400">Proportional share of buyer prospects grouped by marketing channel</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-amber-600">{getLeadSourceDistributionData().length}</div>
+                        <div className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase font-mono">Channels</div>
+                      </div>
+                    </div>
+
+                    <div style={{ width: '100%', height: '200px', minHeight: '200px' }} className="relative flex items-center justify-center">
+                      {getLeadSourceDistributionData().length === 0 ? (
+                        <div className="text-xs text-slate-400 font-medium">No lead source records available</div>
+                      ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={getLeadSourceDistributionData()}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={50}
+                              outerRadius={75}
+                              paddingAngle={3}
+                              dataKey="value"
+                            >
+                              {getLeadSourceDistributionData().map((entry, index) => {
+                                const COLORS = [
+                                  '#10b981', // Emerald
+                                  '#3b82f6', // Blue
+                                  '#f59e0b', // Amber
+                                  '#8b5cf6', // Purple
+                                  '#ec4899', // Pink
+                                  '#06b6d4', // Cyan
+                                  '#14b8a6', // Teal
+                                  '#f97316'  // Orange
+                                ];
+                                return <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />;
+                              })}
+                            </Pie>
+                            <Tooltip
+                              contentStyle={{ background: '#1e293b', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '11px' }}
+                              itemStyle={{ color: '#fff' }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Legend / Key Details */}
+                  {getLeadSourceDistributionData().length > 0 && (
+                    <div className="mt-4 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 max-h-[110px] overflow-y-auto scrollbar-thin">
+                      {getLeadSourceDistributionData().map((entry, index) => {
+                        const COLORS = [
+                          '#10b981', // Emerald
+                          '#3b82f6', // Blue
+                          '#f59e0b', // Amber
+                          '#8b5cf6', // Purple
+                          '#ec4899', // Pink
+                          '#06b6d4', // Cyan
+                          '#14b8a6', // Teal
+                          '#f97316'  // Orange
+                        ];
+                        const total = contacts.length || 1;
+                        const percentage = Math.round((entry.value / total) * 100);
+                        return (
+                          <div key={entry.name} className="flex items-center gap-2 text-slate-600">
+                            <span 
+                              className="w-2.5 h-2.5 rounded-full shrink-0" 
+                              style={{ backgroundColor: COLORS[index % COLORS.length] }} 
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[10px] font-semibold text-slate-700 truncate leading-tight" title={entry.name}>
+                                {entry.name}
+                              </p>
+                              <p className="text-[9px] text-slate-400 font-mono">
+                                {entry.value} lead{entry.value !== 1 && 's'} ({percentage}%)
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
               </div>
@@ -1981,6 +2243,19 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
                     />
                   </div>
 
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Monthly Revenue Goal ($)</label>
+                    <input 
+                      type="number" 
+                      min="0"
+                      value={generatorGoal || ''} 
+                      onChange={(e) => setGeneratorGoal(Number(e.target.value))}
+                      placeholder="e.g. 50000" 
+                      required
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+
                   {/* PREMIUM MARKET PRICE Intelligence Advisor PANEL */}
                   <div className="md:col-span-2 bg-gradient-to-r from-emerald-50/70 to-teal-50/50 border border-emerald-100 rounded-2xl p-5 mt-2 space-y-4">
                     <div className="flex items-start justify-between">
@@ -2124,7 +2399,7 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
                 {/* THE ACTIVE INSIGHTED STAGES GRID */}
                 {currentActiveFunnel ? (
                   <div className="space-y-6">
-                    <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                    <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 text-xs">
                       <div>
                         <span className="text-slate-400">Target Avatar:</span>
                         <p className="font-semibold text-emerald-950 mt-1">{currentActiveFunnel.avatar}</p>
@@ -2140,6 +2415,25 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
                       <div>
                         <span className="text-slate-400">Main Channel / Pricing:</span>
                         <p className="font-semibold text-emerald-950 mt-1">{currentActiveFunnel.mainChannel} @ {currentActiveFunnel.pricePoint}</p>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">Monthly Revenue Goal:</span>
+                        <div className="flex items-center gap-1.5 mt-1.5">
+                          <span className="text-emerald-700 font-bold">$</span>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="e.g. 50000"
+                            value={currentActiveFunnel.monthlyRevenueGoal || ''}
+                            onChange={(e) => {
+                              const val = e.target.value === '' ? undefined : Number(e.target.value);
+                              const updated = { ...currentActiveFunnel, monthlyRevenueGoal: val };
+                              setFunnels(prev => prev.map(f => f.id === currentActiveFunnel.id ? updated : f));
+                              saveFunnelToFirestore(updated);
+                            }}
+                            className="bg-white border border-emerald-250 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded-lg px-2.5 py-1 text-slate-800 font-bold w-full max-w-[120px] outline-none transition-all shadow-sm"
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -2343,130 +2637,296 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
               
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
-                {/* CRM CONTACTS PIPELINE GRID LIST */}
-                <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                {/* CRM CONTACTS PIPELINE CONTAINER */}
+                <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-5">
+                  
+                  {/* SEARCH BAR & LAYOUT SWITCHER HEADER */}
+                  <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-4 border-b border-slate-100">
                     <div>
-                      <h2 className="text-base font-display font-medium text-slate-800">Acquired Leads Ledger</h2>
-                      <p className="text-xs text-slate-400">Click lead to track outreach sessions, score values, and simulate checkouts</p>
+                      <h2 className="text-base font-display font-semibold text-slate-800">
+                        {crmDisplayMode === 'kanban' ? 'Funnel Stages Pipeline' : 'Prospects Leads Ledger'}
+                      </h2>
+                      <p className="text-xs text-slate-400">
+                        {crmDisplayMode === 'kanban' 
+                          ? 'Drag individual cards between stages to reassign pipelines' 
+                          : 'In-depth directory of manually enqueued and organic conversions'}
+                      </p>
                     </div>
                     
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      {/* Interactive Search Bar */}
+                      <div className="relative min-w-[180px] xs:min-w-[210px] flex-1">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                          <Search className="h-3.5 w-3.5 text-slate-400" />
+                        </span>
+                        <input
+                          id="crm-search-bar"
+                          type="text"
+                          placeholder="Filter name, company, source..."
+                          value={crmSearchQuery}
+                          onChange={(e) => setCrmSearchQuery(e.target.value)}
+                          className="w-full pl-9 pr-7 py-1.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-emerald-500 text-xs rounded-xl focus:outline-none transition-all placeholder:text-slate-400"
+                        />
+                        {crmSearchQuery && (
+                          <button
+                            onClick={() => setCrmSearchQuery('')}
+                            className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400 hover:text-slate-600"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* View Tab Switcher */}
+                      <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner">
+                        <button
+                          onClick={() => setCrmDisplayMode('kanban')}
+                          className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                            crmDisplayMode === 'kanban'
+                              ? 'bg-white text-slate-900 shadow-sm'
+                              : 'text-slate-500 hover:text-slate-800'
+                          }`}
+                        >
+                          Board
+                        </button>
+                        <button
+                          onClick={() => setCrmDisplayMode('ledger')}
+                          className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                            crmDisplayMode === 'ledger'
+                              ? 'bg-white text-slate-900 shadow-sm'
+                              : 'text-slate-500 hover:text-slate-800'
+                          }`}
+                        >
+                          List
+                        </button>
+                      </div>
+
+                      {/* Export Button */}
                       <button
                         onClick={() => downloadCRMLeadsCSV(contacts)}
-                        className="text-xs bg-slate-50 hover:bg-slate-100 hover:text-emerald-900 border border-slate-200 rounded-xl px-3 py-1.5 font-bold transition-all flex items-center gap-1.5 text-slate-600 shadow-sm"
+                        className="text-xs bg-slate-50 hover:bg-slate-100 hover:text-emerald-950 border border-slate-200 rounded-xl px-3 py-1.5 font-bold transition-all flex items-center gap-1.5 text-slate-600 shadow-sm"
                         title="Export current lead configurations as Excel compatible CSV report"
                       >
                         <FileText className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Export CSV</span>
+                        <span className="hidden sm:inline">Export</span>
                       </button>
-                      <span className="text-xs font-mono font-medium px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full">
-                        {contacts.length} leads
+
+                      {/* Match ratio */}
+                      <span className="text-[10px] font-mono font-bold px-2 py-1 bg-emerald-50 text-emerald-800 rounded-full border border-emerald-100">
+                        {filteredContacts.length}/{contacts.length} Matches
                       </span>
                     </div>
                   </div>
 
-                  <div className="space-y-3.5">
-                    {contacts.map(c => {
-                      const isActive = c.id === activeContactId;
-                      return (
-                        <div 
-                          key={c.id} 
-                          onClick={() => setActiveContactId(c.id)}
-                          className={`p-4 cursor-pointer transition-all rounded-2xl border ${
-                            isActive 
-                              ? 'border-emerald-600 bg-emerald-50/15 ring-1 ring-emerald-500 shadow-sm' 
-                              : 'bg-slate-50 border-slate-200 hover:border-emerald-500/60'
-                          }`}
-                        >
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="text-[10px] font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold uppercase">
-                                {c.funnelStage}
-                              </span>
-                              <span className="text-xs text-slate-400 font-semibold">{c.leadSource}</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <span className="text-sm font-bold text-emerald-700">${c.dealValue.toLocaleString()}</span>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2 border-y border-slate-200/60 text-xs">
-                            <div>
-                              <span className="text-slate-400 block text-[10px] uppercase">Name</span>
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                <span className="font-semibold text-slate-800">{c.name}</span>
-                              </div>
-                            </div>
-                            <div>
-                              <span className="text-slate-400 block text-[10px] uppercase">Contact Details</span>
-                              <span className="text-slate-600 font-mono text-[11px] block">{c.email}</span>
-                              <div className="text-[10px] text-slate-400 font-mono">{c.phone}</div>
-                            </div>
-                            <div>
-                              <span className="text-slate-400 block text-[10px] uppercase">Hotness & VIP status</span>
-                              <div className="mt-1">
-                                <LeadScoreBadge contact={c} />
-                              </div>
-                            </div>
-                          </div>
-
-                          <p className="text-xs text-slate-500 mt-2 bg-white/70 p-2 rounded-lg border border-slate-200/50">
-                            📝 <strong>Latest Log:</strong> {c.notes || "No actions logged yet."}
-                          </p>
-
-                          <div className="mt-3 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] text-slate-400">Change Stage:</span>
-                              <select
-                                value={c.funnelStage}
-                                onChange={(e) => {
-                                  const newStage = e.target.value as FunnelStageType;
-                                  const updated = { ...c, funnelStage: newStage, lastActivity: new Date().toISOString() };
-                                  saveContactToFirestore(updated);
-                                  sendWebNotification("📌 Lead Stage Updated", `Lead "${c.name}" moved to stage: ${newStage}`);
-                                  setLiveAlerts(prev => [`📌 Moved Lead "${c.name}" to Stage [${newStage}]`, ...prev]);
-                                }}
-                                className="bg-white border border-slate-200 rounded text-xs p-1 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                              >
-                                <option value="Awareness">Awareness</option>
-                                <option value="Lead Capture">Lead Capture</option>
-                                <option value="Nurture">Nurture</option>
-                                <option value="Conversion">Conversion</option>
-                                <option value="Retargeting">Retargeting</option>
-                                <option value="Upsell">Upsell</option>
-                                <option value="Retention">Retention</option>
-                              </select>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => {
-                                  setSelectedVoiceLeadId(c.id);
-                                  setActiveTab('voiceSimulator');
-                                }}
-                                className="text-[11px] bg-amber-400 hover:bg-amber-500 text-emerald-950 font-bold px-2.5 py-1 rounded inline-flex items-center gap-1 transition-colors"
-                                title="Engage this specific buyer prospect using real-time conversational soundwave simulator"
-                              >
-                                <PhoneCall className="w-3 h-3" /> Dial with Voice AI
-                              </button>
-
-                              <button
-                                onClick={() => {
-                                  deleteContactFromFirestore(c.id);
-                                  setLiveAlerts(prev => [`🗑️ Discarded lead "${c.name}"`, ...prev]);
-                                }}
-                                className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded transition-all"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-
+                  {/* MAIN SECTION SWITCHER */}
+                  {crmDisplayMode === 'ledger' ? (
+                    <div className="space-y-3.5">
+                      {filteredContacts.length === 0 ? (
+                        <div className="p-12 text-center text-slate-400 text-xs bg-slate-50 rounded-2xl border border-slate-200 border-dashed">
+                          🔍 No prospects found matching specified criteria. Try clearing filters.
                         </div>
-                      );
-                    })}
-                  </div>
+                      ) : (
+                        filteredContacts.map(c => {
+                          const isActive = c.id === activeContactId;
+                          return (
+                            <div 
+                              key={c.id} 
+                              onClick={() => setActiveContactId(c.id)}
+                              className={`p-4 cursor-pointer transition-all rounded-2xl border ${
+                                isActive 
+                                  ? 'border-emerald-600 bg-emerald-50/15 ring-1 ring-emerald-500 shadow-sm' 
+                                  : 'bg-slate-50 border-slate-200 hover:border-emerald-500/60'
+                              }`}
+                            >
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="text-[10px] font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold uppercase">
+                                    {c.funnelStage}
+                                  </span>
+                                  <span className="text-xs text-slate-400 font-semibold">{c.leadSource}</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <span className="text-sm font-bold text-emerald-700">${c.dealValue.toLocaleString()}</span>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2 border-y border-slate-200/60 text-xs">
+                                <div>
+                                  <span className="text-slate-400 block text-[10px] uppercase">Name</span>
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    <span className="font-semibold text-slate-800">{c.name}</span>
+                                  </div>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400 block text-[10px] uppercase">Contact Details</span>
+                                  <span className="text-slate-600 font-mono text-[11px] block">{c.email}</span>
+                                  <div className="text-[10px] text-slate-400 font-mono">{c.phone}</div>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400 block text-[10px] uppercase">Hotness & VIP status</span>
+                                  <div className="mt-1">
+                                    <LeadScoreBadge contact={c} />
+                                  </div>
+                                </div>
+                              </div>
+
+                              <p className="text-xs text-slate-500 mt-2 bg-white/70 p-2 rounded-lg border border-slate-200/50">
+                                📝 <strong>Latest Log:</strong> {c.notes || "No actions logged yet."}
+                              </p>
+
+                              <div className="mt-3 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] text-slate-400">Change Stage:</span>
+                                  <select
+                                    value={c.funnelStage}
+                                    onChange={(e) => {
+                                      const newStage = e.target.value as FunnelStageType;
+                                      const updated = { ...c, funnelStage: newStage, lastActivity: new Date().toISOString() };
+                                      saveContactToFirestore(updated);
+                                      sendWebNotification("📌 Lead Stage Updated", `Lead "${c.name}" moved to stage: ${newStage}`);
+                                      setLiveAlerts(prev => [`📌 Moved Lead "${c.name}" to Stage [${newStage}]`, ...prev]);
+                                    }}
+                                    className="bg-white border border-slate-200 rounded text-xs p-1 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                  >
+                                    <option value="Awareness">Awareness</option>
+                                    <option value="Lead Capture">Lead Capture</option>
+                                    <option value="Nurture">Nurture</option>
+                                    <option value="Conversion">Conversion</option>
+                                    <option value="Retargeting">Retargeting</option>
+                                    <option value="Upsell">Upsell</option>
+                                    <option value="Retention">Retention</option>
+                                  </select>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => {
+                                      setSelectedVoiceLeadId(c.id);
+                                      setActiveTab('voiceSimulator');
+                                    }}
+                                    className="text-[11px] bg-amber-400 hover:bg-amber-500 text-emerald-950 font-bold px-2.5 py-1 rounded inline-flex items-center gap-1 transition-colors"
+                                    title="Engage this specific buyer prospect using real-time conversational soundwave simulator"
+                                  >
+                                    <PhoneCall className="w-3 h-3" /> Dial with Voice AI
+                                  </button>
+
+                                  <button
+                                    onClick={() => {
+                                      deleteContactFromFirestore(c.id);
+                                      setLiveAlerts(prev => [`🗑️ Discarded lead "${c.name}"`, ...prev]);
+                                    }}
+                                    className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded transition-all"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  ) : (
+                    /* KANBAN VISUAL BOARD WITH DRAG & DROP SUPPORT */
+                    <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin select-none">
+                      {(['Awareness', 'Lead Capture', 'Nurture', 'Conversion', 'Retargeting', 'Upsell', 'Retention'] as FunnelStageType[]).map(stage => {
+                        const stageContacts = filteredContacts.filter(c => c.funnelStage === stage);
+                        const isOver = draggedOverStage === stage;
+                        const totalDealValue = stageContacts.reduce((acc, current) => acc + (current.dealValue || 0), 0);
+
+                        return (
+                          <motion.div
+                            key={stage}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              if (draggedOverStage !== stage) setDraggedOverStage(stage);
+                            }}
+                            onDragLeave={() => {
+                              setDraggedOverStage(null);
+                            }}
+                            onDrop={(e) => {
+                              setDraggedOverStage(null);
+                              handleDrop(e, stage);
+                            }}
+                            animate={{ 
+                              scale: isOver ? 1.025 : 1, 
+                              y: isOver ? -6 : 0,
+                              borderColor: isOver ? '#059669' : '#e2e8f0',
+                              backgroundColor: isOver ? '#f0fdf4' : '#f8fafc',
+                              boxShadow: isOver 
+                                ? '0 20px 25px -5px rgba(5, 150, 105, 0.15), 0 10px 10px -5px rgba(5, 150, 105, 0.04)' 
+                                : '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+                            }}
+                            transition={{ type: 'spring', stiffness: 350, damping: 24 }}
+                            className="flex-1 min-w-[260px] max-w-[280px] p-4 rounded-2xl border flex flex-col transition-all"
+                          >
+                            {/* Column Header */}
+                            <div className="flex items-start justify-between mb-3.5 pb-2 border-b border-slate-200/60 shrink-0">
+                              <div>
+                                <h3 className={`text-xs font-bold tracking-tight uppercase transition-colors ${isOver ? 'text-emerald-800' : 'text-slate-700'}`}>
+                                  {stage} {isOver && '✨'}
+                                </h3>
+                                <p className="text-[10px] font-mono font-bold text-emerald-600 mt-0.5">${totalDealValue.toLocaleString()}</p>
+                              </div>
+                              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full shadow-xs border transition-all ${
+                                isOver 
+                                  ? 'bg-emerald-600 text-white border-emerald-700' 
+                                  : 'bg-white text-slate-600 border-slate-200'
+                              }`}>
+                                {stageContacts.length}
+                              </span>
+                            </div>
+
+                            {/* Drop Cards Zone */}
+                            <div className={`space-y-2.5 min-h-[350px] max-h-[500px] overflow-y-auto pr-1 transition-all rounded-xl p-1.5 ${
+                              isOver ? 'bg-emerald-500/5 ring-1 ring-dashed ring-emerald-400' : ''
+                            }`}>
+                              {stageContacts.length === 0 ? (
+                                <div className={`h-32 border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-[10px] p-4 text-center transition-all ${
+                                  isOver 
+                                    ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700 font-bold scale-[0.98]' 
+                                    : 'border-slate-200/80 text-slate-400'
+                                }`}>
+                                  <span>{isOver ? 'Drop lead here! 🚀' : 'Drag leads here to swap stage'}</span>
+                                </div>
+                              ) : (
+                                stageContacts.map(c => {
+                                  const isSelected = c.id === activeContactId;
+                                  return (
+                                    <div
+                                      key={c.id}
+                                      draggable
+                                      onDragStart={(e) => handleDragStart(e, c.id)}
+                                      onClick={() => setActiveContactId(c.id)}
+                                      className={`p-3.5 bg-white rounded-xl border cursor-grab active:cursor-grabbing hover:shadow-md transition-all space-y-2 ${
+                                        isSelected 
+                                          ? 'border-emerald-600 ring-1 ring-emerald-500 shadow-sm' 
+                                          : 'border-slate-200 hover:border-emerald-500/40'
+                                      }`}
+                                    >
+                                      <div className="flex items-start justify-between gap-1.5">
+                                        <h4 className="text-xs font-semibold text-slate-800 leading-tight truncate" title={c.name}>{c.name}</h4>
+                                        <span className="text-[11px] font-bold text-emerald-700 font-mono">${c.dealValue.toLocaleString()}</span>
+                                      </div>
+                                      <p className="text-[10px] text-slate-400 truncate">{c.company || 'Independent Lead'}</p>
+                                      
+                                      {/* Mini Score Badge inline */}
+                                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5">
+                                        <span className="text-[9px] text-slate-400 font-mono truncate max-w-[110px]" title={c.leadSource}>
+                                          {c.leadSource}
+                                        </span>
+                                        <LeadScoreBadge contact={c} />
+                                      </div>
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* RIGHT COLUMN: ACTION PANELS (Logs Switcher vs manual add) */}
@@ -2553,21 +3013,37 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
                         <input 
                           type="email"
                           value={newContact.email}
-                          onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
+                          onChange={(e) => {
+                            setNewContact({ ...newContact, email: e.target.value });
+                            setFormValidationErrors(prev => ({ ...prev, email: undefined }));
+                          }}
                           placeholder="sam@avery.io"
                           required
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          className={`w-full bg-slate-50 border rounded-xl p-2.5 text-xs focus:outline-none focus:ring-1 ${
+                            formValidationErrors.email ? 'border-red-505 focus:ring-red-500 bg-red-50/10' : 'border-slate-200 focus:ring-emerald-500'
+                          }`}
                         />
+                        {formValidationErrors.email && (
+                          <div id="email-validation-error" className="text-[10px] font-semibold text-red-500 mt-1 leading-tight">{formValidationErrors.email}</div>
+                        )}
                       </div>
                       <div>
                         <label className="block text-[10px] font-bold text-slate-500 uppercase">Phone Number</label>
                         <input 
                           type="text"
                           value={newContact.phone}
-                          onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
+                          onChange={(e) => {
+                            setNewContact({ ...newContact, phone: e.target.value });
+                            setFormValidationErrors(prev => ({ ...prev, phone: undefined }));
+                          }}
                           placeholder="+1 (555) 902-1111"
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:outline-none"
+                          className={`w-full bg-slate-50 border rounded-xl p-2.5 text-xs focus:outline-none focus:ring-1 ${
+                            formValidationErrors.phone ? 'border-red-505 focus:ring-red-500 bg-red-50/10' : 'border-slate-200 focus:ring-emerald-500'
+                          }`}
                         />
+                        {formValidationErrors.phone && (
+                          <div id="phone-validation-error" className="text-[10px] font-semibold text-red-500 mt-1 leading-tight">{formValidationErrors.phone}</div>
+                        )}
                       </div>
                     </div>
 

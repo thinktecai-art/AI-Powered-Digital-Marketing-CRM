@@ -25,7 +25,8 @@ export const SEED_FUNNEL: Funnel = {
   mainChannel: 'LinkedIn Premium Organic & Short-form Workshops',
   pricePoint: '$12,500 Premium Retainer',
   createdAt: '2026-06-17T12:00:00.000Z',
-  status: 'Active'
+  status: 'Active',
+  monthlyRevenueGoal: 50000
 };
 
 export const SEED_ASSETS: Asset[] = [

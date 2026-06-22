@@ -2502,9 +2502,17 @@ const handleCreateCheckoutSession = async (req: express.Request, res: express.Re
     });
   }
 
-  const priceId = planType === 'yearly' 
+  let priceId = (planType === 'yearly' || planType === 'annual') 
     ? process.env.STRIPE_YEARLY_PRICE_ID 
     : process.env.STRIPE_MONTHLY_PRICE_ID;
+
+  if (priceId) {
+    // Sanitize in case priceId has some description appended, e.g. "price_XYZ -$49.99/monthly" or matches "price_[a-zA-Z0-9]+"
+    const match = priceId.trim().match(/price_[a-zA-Z0-9]+/);
+    if (match) {
+      priceId = match[0];
+    }
+  }
 
   if (!priceId) {
     return res.status(400).json({
