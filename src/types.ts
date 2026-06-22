@@ -82,4 +82,5 @@ export type CRMViewTab =
   | 'quizBuilder' 
   | 'voiceSimulator' 
   | 'sentinel'
-  | 'aiCopywriter';
+  | 'aiCopywriter'
+  | 'subscription';

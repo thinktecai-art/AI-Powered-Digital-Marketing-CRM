@@ -2490,6 +2490,55 @@ app.post("/api/stripe/create-payment-intent", async (req: express.Request, res: 
   }
 });
 
+// POST /create-checkout-session and /api/create-checkout-session for Stripe Subscription Checkout
+const handleCreateCheckoutSession = async (req: express.Request, res: express.Response) => {
+  const { planType, userId } = req.body; // planType: 'monthly' or 'yearly'
+  
+  const keyToUse = process.env.STRIPE_SECRET_KEY;
+  if (!keyToUse) {
+    return res.status(400).json({ 
+      error: "STRIPE_SECRET_KEY_MISSING",
+      message: "Stripe Secret Key is missing. Please configure STRIPE_SECRET_KEY in environment variables."
+    });
+  }
+
+  const priceId = planType === 'yearly' 
+    ? process.env.STRIPE_YEARLY_PRICE_ID 
+    : process.env.STRIPE_MONTHLY_PRICE_ID;
+
+  if (!priceId) {
+    return res.status(400).json({
+      error: "STRIPE_PRICE_ID_MISSING",
+      message: `Stripe Price ID for plan type '${planType}' is missing in the environment. Please configure STRIPE_MONTHLY_PRICE_ID and STRIPE_YEARLY_PRICE_ID.`
+    });
+  }
+
+  try {
+    const { default: Stripe } = await import("stripe");
+    const stripeInstance = new Stripe(keyToUse as string, {
+      apiVersion: "2023-10-16" as any
+    });
+
+    const session = await stripeInstance.checkout.sessions.create({
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [{ price: priceId, quantity: 1 }],
+      // Metadata allows you to track which AI Studio user is paying
+      metadata: { userId: userId || "anonymous" }, 
+      success_url: 'https://ai.studio/apps/b1d51413-2ece-41be-8f7c-562881668305?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: 'https://ai.studio/apps/b1d51413-2ece-41be-8f7c-562881668305',
+    });
+
+    res.json({ url: session.url });
+  } catch (error: any) {
+    console.error("Stripe Checkout Session creation error:", error.message);
+    res.status(500).json({ error: error.message || "Failed to create Stripe Checkout session." });
+  }
+};
+
+app.post('/create-checkout-session', express.json(), handleCreateCheckoutSession);
+app.post('/api/create-checkout-session', express.json(), handleCreateCheckoutSession);
+
 // Health metrics and API status
 app.get("/api/health", (req, res) => {
   res.json({

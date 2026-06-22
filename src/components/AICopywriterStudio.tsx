@@ -33,6 +33,14 @@ import { Funnel } from '../types';
 
 interface AICopywriterStudioProps {
   activeFunnel: Funnel | null | undefined;
+  userSubscription?: {
+    plan: string;
+    status: string;
+    expiresAt: string;
+    price: string;
+    billingPeriod: string;
+  };
+  setActiveTab?: (tab: string) => void;
 }
 
 type CopyToolType = 
@@ -59,7 +67,17 @@ type CopyToolType =
   | 'community_execution'
   | 'call_tracking';
 
-export default function AICopywriterStudio({ activeFunnel }: AICopywriterStudioProps) {
+export default function AICopywriterStudio({ activeFunnel, userSubscription, setActiveTab }: AICopywriterStudioProps) {
+  const [generationsCount, setGenerationsCount] = useState(() => {
+    const saved = localStorage.getItem('sovereign_generations_count');
+    return saved ? parseInt(saved, 10) : 0;
+  });
+
+  const trackGeneration = () => {
+    const nextCount = generationsCount + 1;
+    setGenerationsCount(nextCount);
+    localStorage.setItem('sovereign_generations_count', nextCount.toString());
+  };
   // Inputs matching requirements
   const [productName, setProductName] = useState('');
   const [category, setCategory] = useState('');
@@ -144,6 +162,12 @@ export default function AICopywriterStudio({ activeFunnel }: AICopywriterStudioP
   };
 
   const executeGeneration = async () => {
+    const isTrial = !userSubscription || userSubscription.plan === 'Free Trial';
+    if (isTrial && generationsCount >= 3) {
+      setErrorText("Trial Limit Reached: Your 7-day free trial is strictly limited to 3 content generations. Upgrade to Sovereign Pro ($49.99/mo) to unlock unlimited instant generations!");
+      return;
+    }
+
     setIsGenerating(true);
     setErrorText(null);
     setGenerationOutput(null);
@@ -194,6 +218,12 @@ export default function AICopywriterStudio({ activeFunnel }: AICopywriterStudioP
     };
 
     try {
+       // Also block premium tools if on trial
+       const isPremium = ['orchestrator', 'analytics_story', 'social_calendar', 'conversational_chat'].includes(selectedTool);
+       if (isTrial && isPremium) {
+         throw new Error("Premium Tool Locked: This generator tool is exclusive to Sovereign Pro subscribers. Upgrade your license to access high-tier predictive copy frameworks.");
+       }
+
       const response = await fetch('/api/ai/copywriter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -206,6 +236,9 @@ export default function AICopywriterStudio({ activeFunnel }: AICopywriterStudioP
 
       const result = await response.json();
       setGenerationOutput(result.data);
+      if (isTrial) {
+        trackGeneration();
+      }
     } catch (err: any) {
       console.error("AI copywriting execution issue:", err);
       setErrorText(err.message || "Failed to contact Gemini API. Please review parameters or server status.");
@@ -318,6 +351,30 @@ export default function AICopywriterStudio({ activeFunnel }: AICopywriterStudioP
           </div>
         </div>
       </div>
+
+      {/* Trial Status Banner */}
+      {(!userSubscription || userSubscription.plan === 'Free Trial') && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-amber-550/5 to-transparent border border-amber-500/25 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-amber-500/10 rounded-xl text-amber-400 mt-0.5 shrink-0">
+              <ShieldAlert className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-amber-300">Strictly Limited 7-Day Trial Mode Active</h4>
+              <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
+                You have used <span className="font-bold text-amber-400 font-mono">{generationsCount}/3</span> free generation credits. Advanced campaign roadmap planner, 30-day content calendar, diagnostics storyteller, and dynamic web chats are locked.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setActiveTab?.('subscription')}
+            className="text-xs whitespace-nowrap bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-4 py-2.5 rounded-xl cursor-pointer shadow transition-all flex items-center gap-1.5 self-start md:self-center"
+          >
+            <span>Upgrade to Sovereign Pro ($49.99/mo)</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
         {/* 📋 Left configurations and selector */}
@@ -754,6 +811,8 @@ export default function AICopywriterStudio({ activeFunnel }: AICopywriterStudioP
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-2">
               {toolsList.map((tool) => {
                 const IconComponent = tool.icon;
+                const isTrial = !userSubscription || userSubscription.plan === 'Free Trial';
+                const isPremium = ['orchestrator', 'analytics_story', 'social_calendar', 'conversational_chat'].includes(tool.id);
                 return (
                   <button
                     key={tool.id}
@@ -769,12 +828,19 @@ export default function AICopywriterStudio({ activeFunnel }: AICopywriterStudioP
                         : 'bg-white border-slate-200/60 hover:bg-slate-100 text-slate-700'
                     }`}
                   >
-                    <div className={`p-1.5 rounded-lg mt-0.5 ${selectedTool === tool.id ? 'bg-emerald-800 text-amber-300' : 'bg-slate-100 text-slate-600'}`}>
+                    <div className={`p-1.5 rounded-lg mt-0.5 ${selectedTool === tool.id ? 'bg-emerald-800 text-amber-300' : 'bg-slate-150 text-slate-600'}`}>
                       <IconComponent className="w-4 h-4 text-inherit" />
                     </div>
-                    <div>
-                      <h4 className="text-xs font-semibold">{tool.name}</h4>
-                      <p className={`text-[10px] ${selectedTool === tool.id ? 'text-emerald-100/80' : 'text-slate-400'} mt-0.5 font-light leading-snug`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold truncate">{tool.name}</span>
+                        {isTrial && isPremium && (
+                          <span className="inline-flex items-center gap-0.5 text-[8px] bg-amber-500/10 border border-amber-500/20 text-amber-600 px-1 py-0.5 rounded-full font-black uppercase font-mono leading-none">
+                            <Lock className="w-2 h-2 text-amber-500" /> PRO
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-[10px] ${selectedTool === tool.id ? 'text-emerald-100/80' : 'text-slate-400'} mt-0.5 font-light leading-snug truncate`}>
                         {tool.desc}
                       </p>
                     </div>
@@ -840,10 +906,80 @@ export default function AICopywriterStudio({ activeFunnel }: AICopywriterStudioP
             )}
 
             {/* Main Stage Content */}
-            <div className="flex-1 flex flex-col justify-center relative z-10">
-              <AnimatePresence mode="wait">
-                {/* 1. IDLE STATE */}
-                {!isGenerating && !generationOutput && (
+            <div className="flex-1 flex flex-col justify-center relative z-10 animate-fadeIn">
+              {(() => {
+                const isTrial = !userSubscription || userSubscription.plan === 'Free Trial';
+                const isPremium = ['orchestrator', 'analytics_story', 'social_calendar', 'conversational_chat'].includes(selectedTool);
+                
+                if (isTrial && isPremium) {
+                  return (
+                    <motion.div
+                      key="premium-locked"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="text-center py-12 px-6 max-w-lg mx-auto space-y-6"
+                    >
+                      <div className="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-500 mx-auto border border-amber-500/20 shadow-lg relative">
+                        <Lock className="w-8 h-8 text-amber-500" />
+                        <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-amber-400" />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="bg-amber-500/15 border border-amber-500/30 text-amber-400 font-mono text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                          Sovereign Pro Exclusive Feature
+                        </span>
+                        <h3 className="text-lg font-bold font-sans text-slate-100 tracking-tight mt-2">
+                          {toolsList.find(t => t.id === selectedTool)?.name || 'Premium Copy Generator'} is Locked
+                        </h3>
+                        <p className="text-xs text-slate-400 leading-relaxed font-light">
+                          This advanced copywriting tool is reserved for active Pro subscribers. Your 7-day trial supports basic copy frameworks like SEO content pillars and social proofs.
+                        </p>
+                      </div>
+                      
+                      <div className="p-4 bg-slate-950/50 border border-slate-800 rounded-xl space-y-3 text-left">
+                        <h4 className="text-xs font-bold text-slate-300 uppercase tracking-widest font-mono">Unlocked with Sovereign Pro:</h4>
+                        <ul className="text-[11px] text-slate-400 space-y-1">
+                          <li className="flex items-center gap-1.5">
+                            <Check className="w-3.5 h-3.5 text-emerald-450 shrink-0" />
+                            <span className="text-slate-350">Unlimited Gemini 3.5 Flash core modeling</span>
+                          </li>
+                          <li className="flex items-center gap-1.5">
+                            <Check className="w-3.5 h-3.5 text-emerald-455 shrink-0" />
+                            <span className="text-slate-355">30-Day automated social media calendar generator</span>
+                          </li>
+                          <li className="flex items-center gap-1.5">
+                            <Check className="w-3.5 h-3.5 text-emerald-455 shrink-0" />
+                            <span className="text-slate-355">Full step-by-step Campaign Orchestrator & Roadmap</span>
+                          </li>
+                          <li className="flex items-center gap-1.5">
+                            <Check className="w-3.5 h-3.5 text-emerald-455 shrink-0" />
+                            <span className="text-slate-355">Interactive Conversational AI Chat & Funnel Storyteller</span>
+                          </li>
+                        </ul>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                        <button
+                          onClick={() => setActiveTab?.('subscription')}
+                          className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs rounded-lg transition cursor-pointer shadow shadow-emerald-500/10 flex items-center justify-center gap-1.5"
+                        >
+                          <span>Upgrade Plan to Sovereign Pro</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setSelectedTool('seo')}
+                          className="w-full sm:w-auto px-4 py-2.5 bg-slate-850 hover:bg-slate-800 text-slate-300 font-bold text-xs rounded-lg border border-slate-750 transition cursor-pointer"
+                        >
+                          Return to Basic Tools
+                        </button>
+                      </div>
+                    </motion.div>
+                  );
+                }
+
+                return (
+                  <AnimatePresence mode="wait">
+                    {/* 1. IDLE STATE */}
+                    {!isGenerating && !generationOutput && (
                   <motion.div
                     key="idle"
                     initial={{ opacity: 0, y: 10 }}
@@ -3170,6 +3306,8 @@ export default function AICopywriterStudio({ activeFunnel }: AICopywriterStudioP
                   </motion.div>
                 )}
               </AnimatePresence>
+                );
+              })()}
             </div>
           </div>
         </div>
