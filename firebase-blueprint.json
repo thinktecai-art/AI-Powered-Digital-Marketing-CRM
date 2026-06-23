@@ -31,6 +31,18 @@
             "createdAt": { "type": "string", "required": true },
             "status": { "type": "string", "required": true }
           }
+        },
+        "subscriptions": {
+          "fields": {
+            "plan": { "type": "string", "required": true },
+            "status": { "type": "string", "required": true },
+            "expiresAt": { "type": "string", "required": true },
+            "price": { "type": "string", "required": true },
+            "billingPeriod": { "type": "string", "required": true },
+            "customerId": { "type": "string", "required": false },
+            "subscriptionId": { "type": "string", "required": false },
+            "updatedAt": { "type": "string", "required": true }
+          }
         }
       }
     }

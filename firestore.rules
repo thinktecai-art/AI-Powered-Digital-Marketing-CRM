@@ -26,5 +26,11 @@ service cloud.firestore {
     match /funnels/{funnelId} {
       allow read, write: if isSignedIn() && isValidId(funnelId);
     }
+
+    // Secure Subscriptions collection
+    match /subscriptions/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow write: if false; // Only written/edited from server side Stripe webhook
+    }
   }
 }

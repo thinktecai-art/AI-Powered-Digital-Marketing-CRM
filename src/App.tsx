@@ -58,6 +58,7 @@ import {
   deleteContactFromFirestore, 
   syncFunnels, 
   saveFunnelToFirestore,
+  syncSubscription,
   auth,
   signInWithGoogle,
   logoutUser,
@@ -422,7 +423,7 @@ export default function App() {
     }
   };
 
-  // Google Auth Listener
+  // Google Auth Listener and subscription syncing
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
@@ -430,6 +431,43 @@ export default function App() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Sync subscription state from Firestore on Auth changes
+  useEffect(() => {
+    if (!currentUser) {
+      setUserSubscription({
+        plan: 'Free Trial',
+        status: 'trialing',
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+        price: '$0/mo',
+        billingPeriod: 'Monthly'
+      });
+      return;
+    }
+
+    console.log(`Syncing subscription status from Firestore for user ${currentUser.uid}...`);
+    const unsubscribe = syncSubscription(currentUser.uid, (data) => {
+      if (data) {
+        setUserSubscription({
+          plan: data.plan || 'Free Trial',
+          status: data.status || 'trialing',
+          expiresAt: data.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+          price: data.price || '$0/mo',
+          billingPeriod: data.billingPeriod || 'Monthly'
+        });
+      } else {
+        setUserSubscription({
+          plan: 'Free Trial',
+          status: 'trialing',
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+          price: '$0/mo',
+          billingPeriod: 'Monthly'
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
 
   // Stripe Checkout Session verification hook
   useEffect(() => {
@@ -441,7 +479,7 @@ export default function App() {
         plan: 'Sovereign Pro',
         status: 'active',
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-        price: '$12,990/yr ($1,082.50/mo)',
+        price: '$499.99/yr ($41.67/mo)',
         billingPeriod: 'Annual'
       });
       alert(`🎉 Stripe Checkout Verified!\n\nThank you for subscribing to Sovereign Pro with Price Session ID: ${sessionId.substring(0, 15)}...\nAbsolute capability limits have been unlocked!`);
@@ -4645,15 +4683,15 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
                       </div>
                       <div className="space-y-1">
                         <div className="text-lg font-bold font-mono text-slate-200">
-                          {billingInterval === 'annual' ? '$1,082.50' : '$1,299'} <span className="text-xs font-normal text-slate-500">/ mo</span>
+                          {billingInterval === 'annual' ? '$41.67' : '$49.99'} <span className="text-xs font-normal text-slate-500">/ mo</span>
                         </div>
                         {billingInterval === 'annual' ? (
                           <div className="text-[10px] text-emerald-400 font-mono font-bold">
-                            Billed annually: $12,990 / yr (2 Months Free - charge 10 months!)
+                            Billed annually: $499.99 / yr (Save ~16%!)
                           </div>
                         ) : (
                           <div className="text-[10px] text-slate-400 font-mono">
-                            Billed monthly: $1,299 / mo
+                            Billed monthly: $49.99 / mo
                           </div>
                         )}
                       </div>
@@ -4668,7 +4706,7 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                   planType: billingInterval,
-                                  userId: 'thinktecai_workspace'
+                                  userId: currentUser?.uid || 'anonymous'
                                 })
                               });
                               const data = await response.json();
@@ -4687,7 +4725,7 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
                         </button>
                         <button 
                           onClick={() => {
-                            const rateStr = billingInterval === 'annual' ? '$12,990/yr ($1,082.50/mo)' : '$1,299/mo';
+                            const rateStr = billingInterval === 'annual' ? '$499.99/yr ($41.67/mo)' : '$49.99/mo';
                             setUserSubscription({
                               plan: 'Sovereign Pro',
                               status: 'active',
@@ -4718,7 +4756,7 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
                     <button 
                       onClick={() => {
-                        setUserSubscription(prev => ({ ...prev, status: 'active', price: '$299/mo', plan: 'Sovereign Pro' }));
+                        setUserSubscription(prev => ({ ...prev, status: 'active', price: '$49.99/mo', plan: 'Sovereign Pro' }));
                         alert("Simulated Webhook: Received 'customer.subscription.created'. Plan marked as Active.");
                       }}
                       className="bg-slate-800 hover:bg-slate-700 p-2 rounded text-slate-200 border border-slate-700 text-[11px] font-mono cursor-pointer"

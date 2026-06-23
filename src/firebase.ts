@@ -167,3 +167,23 @@ export async function saveFunnelToFirestore(funnel: Funnel) {
     console.error("Error saving funnel to Firestore:", error);
   }
 }
+
+/**
+ * Sync dynamic subscription status with Firestore in real-time.
+ */
+export function syncSubscription(
+  userId: string,
+  onUpdate: (subscription: any) => void
+) {
+  const subDoc = doc(db, 'subscriptions', userId);
+  return onSnapshot(subDoc, (docSnap) => {
+    if (docSnap.exists()) {
+      onUpdate(docSnap.data());
+    } else {
+      onUpdate(null);
+    }
+  }, (error) => {
+    console.error("Error syncing user subscription from Firestore:", error);
+  });
+}
+

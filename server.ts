@@ -7,7 +7,13 @@ import { GoogleGenAI } from "@google/genai";
 dotenv.config();
 
 const app = express();
-app.use(express.json());
+app.use((req, res, next) => {
+  if (req.originalUrl === "/webhook" || req.originalUrl === "/api/webhook") {
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+});
 
 const PORT = 3000;
 
@@ -2546,6 +2552,98 @@ const handleCreateCheckoutSession = async (req: express.Request, res: express.Re
 
 app.post('/create-checkout-session', express.json(), handleCreateCheckoutSession);
 app.post('/api/create-checkout-session', express.json(), handleCreateCheckoutSession);
+
+// Handle Stripe Webhooks
+const handleStripeWebhook = async (req: express.Request, res: express.Response) => {
+  const sig = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!webhookSecret) {
+    console.error("❌ Stripe Webhook Secret is missing (STRIPE_WEBHOOK_SECRET).");
+    return res.status(400).send("Webhook secret is missing from environment.");
+  }
+
+  const keyToUse = process.env.STRIPE_SECRET_KEY;
+  if (!keyToUse) {
+    console.error("❌ Stripe Secret Key is missing (STRIPE_SECRET_KEY).");
+    return res.status(400).send("Stripe Secret Key is missing.");
+  }
+
+  let event;
+
+  try {
+    const { default: Stripe } = await import("stripe");
+    const stripeInstance = new Stripe(keyToUse as string, {
+      apiVersion: "2023-10-16" as any
+    });
+    // req.body is already a Buffer here because we used express.raw parser
+    event = stripeInstance.webhooks.constructEvent(
+      req.body, 
+      sig as string, 
+      webhookSecret
+    );
+  } catch (err: any) {
+    console.error(`❌ Webhook signature verification failed: ${err.message}`);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  console.log(`⚡ Stripe Webhook Event Received: ${event.type}`);
+
+  // Handle the completed checkout session
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object as any;
+    const userId = session.metadata?.userId;
+    const customerId = session.customer;
+    const subscriptionId = session.subscription;
+    const amountTotal = session.amount_total; // in cents (e.g. 4999 = $49.99, 49999 = $499.99)
+
+    console.log(`🎉 Stripe Checkout Session completed successfully. Metadata User ID: ${userId}`);
+
+    if (userId && userId !== "anonymous") {
+      try {
+        const { initializeApp, getApps } = await import('firebase-admin/app');
+        const { getFirestore } = await import('firebase-admin/firestore');
+        if (getApps().length === 0) {
+          initializeApp({
+            projectId: 'ai-studio-applet-webapp-a6050'
+          });
+        }
+        
+        // Target custom Firestore database ID
+        const dbAdmin = getFirestore('ai-studio-b1d51413-2ece-41be-8f7c-562881668305');
+        
+        const isAnnual = amountTotal ? amountTotal > 10000 : false;
+        const periodDays = isAnnual ? 365 : 30;
+        const expiresAtDate = new Date(Date.now() + periodDays * 24 * 60 * 60 * 1000).toLocaleDateString();
+        const priceStr = isAnnual ? '$499.99/yr ($41.67/mo)' : '$49.99/mo';
+        const billingPeriodStr = isAnnual ? 'Annual' : 'Monthly';
+
+        // Persist subscription status in Firestore
+        await dbAdmin.collection('subscriptions').doc(userId).set({
+          plan: 'Sovereign Pro',
+          status: 'active',
+          expiresAt: expiresAtDate,
+          price: priceStr,
+          billingPeriod: billingPeriodStr,
+          customerId: customerId || '',
+          subscriptionId: subscriptionId || '',
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        
+        console.log(`✅ User ${userId} subscription status updated to Sovereign Pro in Firestore.`);
+      } catch (dbErr: any) {
+        console.error("❌ Failed to update user subscription in Firestore:", dbErr.message);
+      }
+    } else {
+      console.warn("⚠️ No valid userId in checkout metadata. Skipping Firestore update.");
+    }
+  }
+
+  res.json({ received: true });
+};
+
+app.post('/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
+app.post('/api/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
 // Health metrics and API status
 app.get("/api/health", (req, res) => {
