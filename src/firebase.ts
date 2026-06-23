@@ -17,6 +17,9 @@ import {
   signOut, 
   GoogleAuthProvider, 
   onAuthStateChanged, 
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
   User 
 } from 'firebase/auth';
 import { Contact, Funnel } from './types';
@@ -241,6 +244,73 @@ export function syncSubscription(
     }
   }, (error) => {
     handleFirestoreError(error, OperationType.GET, `subscriptions/${userId}`);
+  });
+}
+
+/**
+ * Register a new user with email, password, display name and company
+ */
+export async function signUpWithEmail(email: string, password: string, name: string, companyName: string) {
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    
+    // Update Firebase Auth profile displayName
+    await updateProfile(user, { displayName: name });
+    
+    // Save additional profile data in Firestore
+    await saveUserProfile(user.uid, name, companyName);
+    
+    return user;
+  } catch (error) {
+    console.error("Error signing up with email/password:", error);
+    throw error;
+  }
+}
+
+/**
+ * Log in a user with email and password
+ */
+export async function loginWithEmail(email: string, password: string) {
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    return userCredential.user;
+  } catch (error) {
+    console.error("Error logging in with email/password:", error);
+    throw error;
+  }
+}
+
+/**
+ * Save or update user profile details in Firestore
+ */
+export async function saveUserProfile(userId: string, name: string, companyName: string) {
+  try {
+    const userRef = doc(db, 'users', userId);
+    await setDoc(userRef, {
+      uid: userId,
+      name,
+      companyName,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `users/${userId}`);
+  }
+}
+
+/**
+ * Real-time sync of user profile details from Firestore
+ */
+export function syncUserProfile(userId: string, onUpdate: (data: any) => void) {
+  const userRef = doc(db, 'users', userId);
+  return onSnapshot(userRef, (docSnap) => {
+    if (docSnap.exists()) {
+      onUpdate(docSnap.data());
+    } else {
+      onUpdate(null);
+    }
+  }, (error) => {
+    handleFirestoreError(error, OperationType.GET, `users/${userId}`);
   });
 }
 

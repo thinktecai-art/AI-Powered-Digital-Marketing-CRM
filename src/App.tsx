@@ -16,6 +16,7 @@ import {
   Send, 
   CheckCircle2, 
   UserPlus, 
+  UserCheck, 
   Search, 
   Code, 
   Video, 
@@ -63,7 +64,11 @@ import {
   signInWithGoogle,
   logoutUser,
   onAuthStateChanged,
-  User 
+  User,
+  signUpWithEmail,
+  loginWithEmail,
+  saveUserProfile,
+  syncUserProfile
 } from './firebase';
 import { 
   AreaChart, 
@@ -174,9 +179,31 @@ export default function App() {
   // Firebase Auth State
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
+  
+  // Custom user profile from Firestore
+  const [userProfile, setUserProfile] = useState<{ name: string; companyName: string } | null>(null);
+  const [authMode, setAuthMode] = useState<'google' | 'signup' | 'login'>('google');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authName, setAuthName] = useState('');
+  const [authCompany, setAuthCompany] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [authSubmitting, setAuthSubmitting] = useState(false);
+
+  const [profileEditName, setProfileEditName] = useState('');
+  const [profileEditCompany, setProfileEditCompany] = useState('');
+  const [isProfileDirty, setIsProfileDirty] = useState(false);
+
+  useEffect(() => {
+    if (userProfile) {
+      setProfileEditName(userProfile.name);
+      setProfileEditCompany(userProfile.companyName);
+    }
+  }, [userProfile]);
 
   // Active Selected Funnel for Detail views & Visual Diagrams
   const [activeFunnelId, setActiveFunnelId] = useState<string>('seed-funnel-1');
+  const [funnelSearchQuery, setFunnelSearchQuery] = useState<string>('');
 
   // Interactive Funnel Generator Fields (Universal Niche architecture)
   const [generatorNiche, setGeneratorNiche] = useState<string>('coaching');
@@ -488,6 +515,30 @@ export default function App() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Sync userProfile details from Firestore on Auth changes
+  useEffect(() => {
+    if (!currentUser) {
+      setUserProfile(null);
+      return;
+    }
+
+    const unsubscribe = syncUserProfile(currentUser.uid, (profile) => {
+      if (profile) {
+        setUserProfile({
+          name: profile.name || currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+          companyName: profile.companyName || ''
+        });
+      } else {
+        setUserProfile({
+          name: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+          companyName: ''
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
 
   // Sync subscription state from Firestore on Auth changes
   useEffect(() => {
@@ -1389,51 +1440,201 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
   }
 
   if (!currentUser) {
+    const handleEmailAuthSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setAuthError('');
+      setAuthSubmitting(true);
+      try {
+        if (authMode === 'signup') {
+          if (!authEmail || !authPassword || !authName) {
+            throw new Error('Please fill out all required fields.');
+          }
+          await signUpWithEmail(authEmail, authPassword, authName, authCompany);
+          sendWebNotification("🔐 Account Created", `Welcome, ${authName}! Your workspace is active.`);
+        } else if (authMode === 'login') {
+          if (!authEmail || !authPassword) {
+            throw new Error('Please fill in both email and password.');
+          }
+          await loginWithEmail(authEmail, authPassword);
+          sendWebNotification("🔐 Welcome Back", "Successfully logged in to your workspace.");
+        }
+      } catch (err: any) {
+        console.error("Auth submit error:", err);
+        setAuthError(err.message || 'An error occurred during authentication.');
+      } finally {
+        setAuthSubmitting(false);
+      }
+    };
+
     return (
       <div className="min-h-screen bg-[#07130e] text-slate-200 flex flex-col items-center justify-center p-4 relative overflow-hidden font-sans">
         {/* Ambient glow backgrounds */}
         <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full bg-emerald-950/40 blur-[130px]" />
         <div className="absolute bottom-[-20%] right-[-20%] w-[60%] h-[60%] rounded-full bg-amber-950/25 blur-[130px]" />
 
-        <div className="w-full max-w-md bg-emerald-950/30 border border-emerald-800/40 backdrop-blur-md rounded-3xl p-8 shadow-2xl space-y-7 text-center relative z-10 transition-all">
-          <div className="space-y-4">
-            <div className="mx-auto w-16 h-16 bg-gradient-to-tr from-amber-400 to-amber-500 text-emerald-950 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3 hover:rotate-6 transition-all">
-              <Sparkles className="w-8 h-8 font-black" />
+        <div className="w-full max-w-md bg-emerald-950/30 border border-emerald-800/40 backdrop-blur-md rounded-3xl p-6 md:p-8 shadow-2xl space-y-6 relative z-10 transition-all">
+          <div className="space-y-4 text-center">
+            <div className="mx-auto w-14 h-14 bg-gradient-to-tr from-amber-400 to-amber-500 text-emerald-950 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3 hover:rotate-6 transition-all">
+              <Sparkles className="w-7 h-7 font-black" />
             </div>
             
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <h1 className="text-2xl font-bold font-display tracking-tight text-white leading-tight">Sovereign CRM Suite</h1>
               <p className="text-xs text-emerald-300/85">Configure target landing funnels, process Stripe checkouts, and automate high-ticket outreach.</p>
             </div>
           </div>
 
-          <div className="border-t border-emerald-900/45 my-2"></div>
-
-          <div className="space-y-4">
-            <p className="text-[11px] font-medium tracking-wider text-emerald-400/80 font-mono uppercase">
-              🔐 Encrypted Firestore Workspace
-            </p>
-            
+          {/* Tab Navigation */}
+          <div className="grid grid-cols-3 bg-emerald-950/60 p-1 rounded-xl border border-emerald-900/50">
             <button
-              onClick={async () => {
-                try {
-                  await signInWithGoogle();
-                  sendWebNotification("🔐 Welcome Back", "Google Authentication Approved.");
-                } catch (err: any) {
-                  console.error("Authentication failed:", err);
-                }
-              }}
-              className="w-full bg-white hover:bg-slate-50 text-slate-900 font-bold py-3.5 px-4 rounded-2xl flex items-center justify-center gap-3 shadow-md active:bg-slate-100 transition-all cursor-pointer font-sans"
+              onClick={() => { setAuthMode('google'); setAuthError(''); }}
+              className={`py-1.5 px-2 text-xs font-semibold rounded-lg transition-all ${authMode === 'google' ? 'bg-amber-400 text-emerald-950 shadow-sm' : 'text-emerald-300/80 hover:text-white hover:bg-emerald-900/40'}`}
             >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path fill="#EA4335" d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.68 1.54 14.98 1 12 1 7.35 1 3.4 3.65 1.5 7.5l3.86 3C6.27 7.57 8.95 5.04 12 5.04z" />
-                <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.34H12v4.44h6.44c-.28 1.44-1.09 2.66-2.31 3.48v2.9h3.73c2.18-2 3.43-4.96 3.43-8.48z" />
-                <path fill="#FBBC05" d="M5.36 14.5c-.24-.72-.38-1.5-.38-2.3s.14-1.58.38-2.3L1.5 6.9C.54 8.79 0 10.89 0 13s.54 4.21 1.5 6.1l3.86-2.6z" />
-                <path fill="#34A853" d="M12 23c3.24 0 5.97-1.08 7.96-2.9l-3.73-2.9c-1.03.69-2.35 1.1-4.23 1.1-3.05 0-5.73-2.53-6.64-5.46l-3.86 3C3.4 20.35 7.35 23 12 23z" />
-              </svg>
-              <span>Connect Google Account</span>
+              Google
+            </button>
+            <button
+              onClick={() => { setAuthMode('signup'); setAuthError(''); }}
+              className={`py-1.5 px-2 text-xs font-semibold rounded-lg transition-all ${authMode === 'signup' ? 'bg-amber-400 text-emerald-950 shadow-sm' : 'text-emerald-300/80 hover:text-white hover:bg-emerald-900/40'}`}
+            >
+              Sign Up
+            </button>
+            <button
+              onClick={() => { setAuthMode('login'); setAuthError(''); }}
+              className={`py-1.5 px-2 text-xs font-semibold rounded-lg transition-all ${authMode === 'login' ? 'bg-amber-400 text-emerald-950 shadow-sm' : 'text-emerald-300/80 hover:text-white hover:bg-emerald-900/40'}`}
+            >
+              Log In
             </button>
           </div>
+
+          {authError && (
+            <div className="bg-red-950/60 border border-red-800/60 text-red-300 px-3 py-2.5 rounded-xl text-xs text-center font-medium leading-relaxed animate-pulse">
+              ⚠️ {authError}
+            </div>
+          )}
+
+          {authMode === 'google' && (
+            <div className="space-y-4">
+              <p className="text-[11px] font-medium tracking-wider text-emerald-400/80 font-mono uppercase text-center">
+                🔐 Connect instantly with google
+              </p>
+              
+              <button
+                onClick={async () => {
+                  try {
+                    await signInWithGoogle();
+                    sendWebNotification("🔐 Welcome Back", "Google Authentication Approved.");
+                  } catch (err: any) {
+                    console.error("Authentication failed:", err);
+                    setAuthError(err.message || 'Google Auth failed');
+                  }
+                }}
+                className="w-full bg-white hover:bg-slate-50 text-slate-900 font-bold py-3.5 px-4 rounded-2xl flex items-center justify-center gap-3 shadow-md active:bg-slate-100 transition-all cursor-pointer font-sans text-sm"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path fill="#EA4335" d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.68 1.54 14.98 1 12 1 7.35 1 3.4 3.65 1.5 7.5l3.86 3C6.27 7.57 8.95 5.04 12 5.04z" />
+                  <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.34H12v4.44h6.44c-.28 1.44-1.09 2.66-2.31 3.48v2.9h3.73c2.18-2 3.43-4.96 3.43-8.48z" />
+                  <path fill="#FBBC05" d="M5.36 14.5c-.24-.72-.38-1.5-.38-2.3s.14-1.58.38-2.3L1.5 6.9C.54 8.79 0 10.89 0 13s.54 4.21 1.5 6.1l3.86-2.6z" />
+                  <path fill="#34A853" d="M12 23c3.24 0 5.97-1.08 7.96-2.9l-3.73-2.9c-1.03.69-2.35 1.1-4.23 1.1-3.05 0-5.73-2.53-6.64-5.46l-3.86 3C3.4 20.35 7.35 23 12 23z" />
+                </svg>
+                <span>Connect Google Account</span>
+              </button>
+            </div>
+          )}
+
+          {authMode === 'signup' && (
+            <form onSubmit={handleEmailAuthSubmit} className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold">Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. John Doe"
+                  value={authName}
+                  onChange={(e) => setAuthName(e.target.value)}
+                  className="w-full bg-emerald-950/80 border border-emerald-800/60 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold">Company / Brand Name (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Sovereign Media"
+                  value={authCompany}
+                  onChange={(e) => setAuthCompany(e.target.value)}
+                  className="w-full bg-emerald-950/80 border border-emerald-800/60 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold">Email Address *</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="name@company.com"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  className="w-full bg-emerald-950/80 border border-emerald-800/60 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold">Password *</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="At least 6 characters"
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  className="w-full bg-emerald-950/80 border border-emerald-800/60 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={authSubmitting}
+                className="w-full mt-2 bg-amber-400 hover:bg-amber-500 active:bg-amber-600 text-emerald-950 font-bold py-3 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-xs"
+              >
+                {authSubmitting ? 'Creating Workspace...' : 'Sign Up & Configure Workspace'}
+              </button>
+            </form>
+          )}
+
+          {authMode === 'login' && (
+            <form onSubmit={handleEmailAuthSubmit} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="name@company.com"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  className="w-full bg-emerald-950/80 border border-emerald-800/60 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold">Password</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Enter your password"
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  className="w-full bg-emerald-950/80 border border-emerald-800/60 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={authSubmitting}
+                className="w-full bg-amber-400 hover:bg-amber-500 active:bg-amber-600 text-emerald-950 font-bold py-3 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-xs"
+              >
+                {authSubmitting ? 'Accessing Workspace...' : 'Log In to Workspace'}
+              </button>
+            </form>
+          )}
 
           <div className="pt-2">
             <span className="text-[10px] bg-emerald-950/60 text-emerald-300/90 font-mono px-3 py-1.5 rounded-lg border border-emerald-900/40 block text-center truncate">
@@ -1485,14 +1686,14 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
             {currentUser && (
               <div className="flex items-center gap-2 bg-emerald-900 border border-emerald-800 rounded-xl p-1.5 px-3">
                 {currentUser.photoURL ? (
-                  <img src={currentUser.photoURL} alt={currentUser.displayName || "User"} className="w-5 h-5 rounded-full border border-emerald-700" referrerPolicy="no-referrer" />
+                  <img src={currentUser.photoURL} alt={userProfile?.name || "User"} className="w-5 h-5 rounded-full border border-emerald-700" referrerPolicy="no-referrer" />
                 ) : (
                   <div className="w-5 h-5 rounded-full bg-amber-400 text-emerald-950 font-bold text-[10px] flex items-center justify-center border border-emerald-700">
-                    {currentUser.displayName ? currentUser.displayName[0].toUpperCase() : (currentUser.email ? currentUser.email[0].toUpperCase() : 'U')}
+                    {userProfile?.name ? userProfile.name[0].toUpperCase() : (currentUser.displayName ? currentUser.displayName[0].toUpperCase() : (currentUser.email ? currentUser.email[0].toUpperCase() : 'U'))}
                   </div>
                 )}
-                <span className="text-xs font-semibold text-emerald-100 hidden lg:inline-block max-w-[100px] truncate">
-                  {currentUser.displayName || currentUser.email}
+                <span className="text-xs font-semibold text-emerald-100 hidden lg:inline-block max-w-[120px] truncate" title={userProfile?.companyName ? `${userProfile.name} (${userProfile.companyName})` : userProfile?.name}>
+                  {userProfile?.name || currentUser.displayName || currentUser.email}
                 </span>
                 <button
                   onClick={async () => {
@@ -1762,6 +1963,65 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
             </ul>
           </div>
 
+          {/* 👤 BRANDED WORKSPACE DETAILS */}
+          {currentUser && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
+              <h4 className="text-xs uppercase tracking-wider text-slate-400 font-mono font-semibold flex items-center gap-1.5">
+                <UserCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                Branded Workspace
+              </h4>
+              <p className="text-[10px] text-slate-400 leading-normal">
+                Customize your display name and company to instantly personalize system dashboards and conversion copy.
+              </p>
+              
+              <div className="space-y-2.5">
+                <div>
+                  <label className="text-[9px] font-mono uppercase tracking-wider text-slate-500 block mb-1 font-bold">Your Name</label>
+                  <input
+                    type="text"
+                    value={profileEditName}
+                    onChange={(e) => {
+                      setProfileEditName(e.target.value);
+                      setIsProfileDirty(true);
+                    }}
+                    className="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition-colors"
+                    placeholder="Enter your name"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-mono uppercase tracking-wider text-slate-500 block mb-1 font-bold">Company / Brand Name</label>
+                  <input
+                    type="text"
+                    value={profileEditCompany}
+                    onChange={(e) => {
+                      setProfileEditCompany(e.target.value);
+                      setIsProfileDirty(true);
+                    }}
+                    className="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition-colors"
+                    placeholder="Enter company name"
+                  />
+                </div>
+                
+                {isProfileDirty && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        await saveUserProfile(currentUser.uid, profileEditName, profileEditCompany);
+                        setIsProfileDirty(false);
+                        sendWebNotification("👤 Profile Updated", "Your display name and company have been saved.");
+                      } catch (err: any) {
+                        alert("Error saving profile details: " + err.message);
+                      }
+                    }}
+                    className="w-full text-center text-xs bg-emerald-600 hover:bg-emerald-700 font-bold text-white py-2 px-3 rounded-xl transition-all shadow-sm cursor-pointer"
+                  >
+                    Save Branded Details
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* 🧹 APPLICATION STORAGE & CACHE WIDGET */}
           <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
             <h4 className="text-xs uppercase tracking-wider text-slate-400 font-mono font-semibold flex items-center gap-1.5">
@@ -1798,7 +2058,7 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
                     <Sparkles className="w-3 h-3" /> Fully functional SaaS Pipeline
                   </span>
                   <h2 className="text-2xl md:text-3xl font-display font-bold tracking-tight">
-                    Welcome back, <span className="text-amber-300">thinktecai</span> 🚀
+                    Welcome back, <span className="text-amber-300">{userProfile?.companyName ? `${userProfile.name} of ${userProfile.companyName}` : (userProfile?.name || currentUser?.displayName || currentUser?.email?.split('@')[0] || 'User')}</span> 🚀
                   </h2>
                   <p className="text-sm text-emerald-100 mt-2 leading-relaxed">
                     Automate lead capturing, build conversion copy, and auto-dial cold leads instantly with custom generative sequences. 9 distinct business niches pre-configured with direct outcome formulas.
@@ -2502,8 +2762,37 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
                   </span>
                 </div>
 
+                {/* Search Bar for Funnel Iterations */}
+                <div className="mb-5">
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Filter existing funnels by product or niche..."
+                      value={funnelSearchQuery}
+                      onChange={(e) => setFunnelSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-10 py-2.5 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 focus:border-emerald-500 rounded-xl text-xs text-slate-800 focus:outline-none transition-all shadow-sm"
+                    />
+                    {funnelSearchQuery && (
+                      <button 
+                        onClick={() => setFunnelSearchQuery('')}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] bg-slate-200 hover:bg-slate-300 text-slate-600 font-mono px-1.5 py-0.5 rounded transition-colors"
+                      >
+                        CLEAR
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 <div className="flex flex-wrap gap-2.5 mb-6">
-                  {funnels.map(f => (
+                  {funnels.filter(f => {
+                    const q = funnelSearchQuery.toLowerCase().trim();
+                    if (!q) return true;
+                    return (
+                      (f.product || '').toLowerCase().includes(q) ||
+                      (f.nicheName || '').toLowerCase().includes(q)
+                    );
+                  }).map(f => (
                     <button
                       key={f.id}
                       onClick={() => {
@@ -2520,6 +2809,18 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
                       <span>{f.product} ({f.nicheName})</span>
                     </button>
                   ))}
+                  {funnels.filter(f => {
+                    const q = funnelSearchQuery.toLowerCase().trim();
+                    if (!q) return true;
+                    return (
+                      (f.product || '').toLowerCase().includes(q) ||
+                      (f.nicheName || '').toLowerCase().includes(q)
+                    );
+                  }).length === 0 && (
+                    <div className="w-full text-center py-6 text-xs text-slate-400 font-medium bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                      No funnel iterations found matching "{funnelSearchQuery}"
+                    </div>
+                  )}
                 </div>
 
                 {/* THE ACTIVE INSIGHTED STAGES GRID */}

@@ -12,6 +12,11 @@ service cloud.firestore {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
 
+    // Rules for Users
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
     // Rules for Contacts (Assuming contacts are structured or have a userId field)
     match /contacts/{contactId} {
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
