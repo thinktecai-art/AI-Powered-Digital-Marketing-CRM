@@ -85,6 +85,8 @@ import { LeadScoreBadge } from './components/LeadScoreBadge';
 import { ActivityLogsPanel } from './components/ActivityLogsPanel';
 import { StripeMockCheckout } from './components/StripeMockCheckout';
 import AICopywriterStudio from './components/AICopywriterStudio';
+import { LeadFlowChart } from './components/LeadFlowChart';
+import { ABTestManager } from './components/ABTestManager';
 
 const getMarketPriceRecommendations = (niche: string) => {
   const norm = (niche || '').toLowerCase();
@@ -237,8 +239,63 @@ export default function App() {
   const [crmSearchQuery, setCrmSearchQuery] = useState<string>('');
   const [formValidationErrors, setFormValidationErrors] = useState<{ email?: string; phone?: string }>({});
   const [draggedOverStage, setDraggedOverStage] = useState<FunnelStageType | null>(null);
+  const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
+  const [selectedStageFilter, setSelectedStageFilter] = useState<FunnelStageType | null>(null);
+  const [librarySubTab, setLibrarySubTab] = useState<'directory' | 'ab-testing'>('directory');
+
+  const clearAllAppCacheAndCookies = async () => {
+    if (!window.confirm("⚠️ This will completely purge all cookies, local storage presets, saved A/B tests, and cached sessions. Are you sure you want to clean and clear everything?")) {
+      return;
+    }
+
+    try {
+      // 1. Clear local storage
+      localStorage.clear();
+
+      // 2. Clear session storage
+      sessionStorage.clear();
+
+      // 3. Clear cookies
+      const cookies = document.cookie.split(";");
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i];
+        const eqPos = cookie.indexOf("=");
+        const name = eqPos > -1 ? cookie.substring(0, eqPos).trim() : cookie.trim();
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
+        const parts = window.location.hostname.split('.');
+        if (parts.length > 2) {
+          const domain = '.' + parts.slice(-2).join('.');
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${domain}`;
+        }
+      }
+
+      // 4. Clear browser Cache Storage API
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(key => caches.delete(key)));
+      }
+
+      // 5. Unregister Service Workers
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(reg => reg.unregister()));
+      }
+
+      alert("✨ Success! App cache, cookies, local storage, and active sessions have been fully cleared. The app will now reload.");
+      window.location.reload();
+    } catch (err) {
+      console.error("Purging cache error:", err);
+      alert("Completed with partial domain exceptions. Local storage and active sessions have been successfully cleared.");
+      window.location.reload();
+    }
+  };
 
   const filteredContacts = contacts.filter(c => {
+    // Stage Filter
+    if (selectedStageFilter && c.funnelStage !== selectedStageFilter) return false;
+
+    // Search query
     const query = crmSearchQuery.toLowerCase().trim();
     if (!query) return true;
     return (
@@ -495,15 +552,28 @@ export default function App() {
     if (!currentUser) return;
 
     console.log("Initializing real-time Firebase Firestore synchronization services...");
-    const unsubscribeContacts = syncContacts((synced) => {
+    const unsubscribeContacts = syncContacts(currentUser.uid, (synced) => {
       if (synced && synced.length > 0) {
         setContacts(synced);
+        // Ensure active contact and selected voice lead IDs map to existing items
+        const hasActive = synced.some(c => c.id === activeContactId);
+        if (!hasActive) {
+          setActiveContactId(synced[0].id);
+        }
+        const hasVoice = synced.some(c => c.id === selectedVoiceLeadId);
+        if (!hasVoice) {
+          setSelectedVoiceLeadId(synced[0].id);
+        }
       }
     }, INITIAL_CONTACTS);
 
-    const unsubscribeFunnels = syncFunnels((synced) => {
+    const unsubscribeFunnels = syncFunnels(currentUser.uid, (synced) => {
       if (synced && synced.length > 0) {
         setFunnels(synced);
+        const hasActiveFunnel = synced.some(f => f.id === activeFunnelId);
+        if (!hasActiveFunnel) {
+          setActiveFunnelId(synced[0].id);
+        }
       }
     }, [SEED_FUNNEL]);
 
@@ -1692,6 +1762,24 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
             </ul>
           </div>
 
+          {/* 🧹 APPLICATION STORAGE & CACHE WIDGET */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
+            <h4 className="text-xs uppercase tracking-wider text-slate-400 font-mono font-semibold flex items-center gap-1.5">
+              <ShieldAlert className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              App Data & Cache Control
+            </h4>
+            <p className="text-[10px] text-slate-400 leading-normal">
+              Directly wipe all cookies, localized storage parameters, simulation datasets, and browser cache records.
+            </p>
+            <button
+              onClick={clearAllAppCacheAndCookies}
+              className="w-full flex items-center justify-center gap-2 text-xs bg-red-50 hover:bg-red-100 border border-red-200 hover:border-red-300 font-bold text-red-700 py-2 px-3 rounded-xl transition-all shadow-sm group cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-red-500 group-hover:scale-110 transition-transform" />
+              <span>Purge Cache & Cookies</span>
+            </button>
+          </div>
+
         </aside>
 
         {/* 🖥️ DYNAMIC ROUTE VIEW AREA */}
@@ -1841,8 +1929,8 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
                     </div>
                   </div>
                   
-                  <div style={{ width: '100%', height: '240px', minHeight: '240px' }}>
-                    <ResponsiveContainer width="100%" height="100%">
+                  <div className="w-full h-[240px] min-h-[240px] relative">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                       <AreaChart
                         data={getPipelineGrowthData()}
                         margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
@@ -1881,8 +1969,8 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
                     </div>
                   </div>
 
-                  <div style={{ width: '100%', height: '240px', minHeight: '240px' }}>
-                    <ResponsiveContainer width="100%" height="100%">
+                  <div className="w-full h-[240px] min-h-[240px] relative">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                       <BarChart
                         data={getConversionRateData()}
                         margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
@@ -1923,11 +2011,11 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
                       </div>
                     </div>
 
-                    <div style={{ width: '100%', height: '200px', minHeight: '200px' }} className="relative flex items-center justify-center">
+                    <div className="w-full h-[200px] min-h-[200px] relative flex items-center justify-center">
                       {getLeadSourceDistributionData().length === 0 ? (
                         <div className="text-xs text-slate-400 font-medium">No lead source records available</div>
                       ) : (
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                           <PieChart>
                             <Pie
                               data={getLeadSourceDistributionData()}
@@ -2556,106 +2644,138 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
           {activeTab === 'library' && (
             <div className="space-y-6">
               
-              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h2 className="text-lg font-display font-bold text-slate-900">Conversion Copy & Asset Bank</h2>
-                    <p className="text-xs text-slate-500">Edit, inspect metrics, and scale direct marketing variations globally.</p>
+              {/* SUB TAB NAVIGATION */}
+              <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner w-fit">
+                <button
+                  onClick={() => setLibrarySubTab('directory')}
+                  className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    librarySubTab === 'directory'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Creative Copy Directory
+                </button>
+                <button
+                  onClick={() => setLibrarySubTab('ab-testing')}
+                  className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
+                    librarySubTab === 'ab-testing'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  🧪 A/B Experiment Lab
+                </button>
+              </div>
+
+              {librarySubTab === 'directory' ? (
+                <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h2 className="text-lg font-display font-bold text-slate-900">Conversion Copy & Asset Bank</h2>
+                      <p className="text-xs text-slate-500">Edit, inspect metrics, and scale direct marketing variations globally.</p>
+                    </div>
+
+                    <span className="text-xs bg-slate-50 border px-3 py-1.5 rounded-xl font-mono text-slate-500">
+                      Total Active: {assets.length} assets
+                    </span>
                   </div>
 
-                  <span className="text-xs bg-slate-50 border px-3 py-1.5 rounded-xl font-mono text-slate-500">
-                    Total Active: {assets.length} assets
-                  </span>
-                </div>
-
-                <div className="space-y-4">
-                  {assets.map(asset => (
-                    <div key={asset.id} className="p-5 bg-white border border-slate-200 rounded-2xl hover:border-emerald-600 transition-all shadow-sm">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 border-b border-slate-100 pb-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-mono text-[10px] font-bold rounded uppercase">
-                              {asset.stageType} stage
-                            </span>
-                            <span className="text-[11px] font-mono text-slate-400">#{asset.id}</span>
-                          </div>
-                          <h4 className="text-sm font-bold text-slate-800 mt-1">{asset.title}</h4>
-                        </div>
-
-                        {/* Visual Metrical Graph */}
-                        <div className="flex items-center gap-4 bg-slate-50 px-3.5 py-2 rounded-xl text-xs font-mono">
+                  <div className="space-y-4">
+                    {assets.map(asset => (
+                      <div key={asset.id} className="p-5 bg-white border border-slate-200 rounded-2xl hover:border-emerald-600 transition-all shadow-sm">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 border-b border-slate-100 pb-3">
                           <div>
-                            <span className="text-slate-400 text-[10px] block uppercase">CTR Outcome</span>
-                            <span className="text-emerald-700 font-bold">{asset.performanceMetrics?.ctr || 4.2}%</span>
+                            <div className="flex items-center gap-2">
+                              <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-mono text-[10px] font-bold rounded uppercase">
+                                {asset.stageType} stage
+                              </span>
+                              <span className="text-[11px] font-mono text-slate-400">#{asset.id}</span>
+                            </div>
+                            <h4 className="text-sm font-bold text-slate-800 mt-1">{asset.title}</h4>
                           </div>
-                          <div className="border-l border-slate-200 h-6"></div>
-                          <div>
-                            <span className="text-slate-400 text-[10px] block uppercase">Leads Logged</span>
-                            <span className="text-slate-700 font-bold">{asset.performanceMetrics?.conversions || 22}</span>
+
+                          {/* Visual Metrical Graph */}
+                          <div className="flex items-center gap-4 bg-slate-50 px-3.5 py-2 rounded-xl text-xs font-mono">
+                            <div>
+                              <span className="text-slate-400 text-[10px] block uppercase">CTR Outcome</span>
+                              <span className="text-emerald-700 font-bold">{asset.performanceMetrics?.ctr || 4.2}%</span>
+                            </div>
+                            <div className="border-l border-slate-200 h-6"></div>
+                            <div>
+                              <span className="text-slate-400 text-[10px] block uppercase">Leads Logged</span>
+                              <span className="text-slate-700 font-bold">{asset.performanceMetrics?.conversions || 22}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/50">
-                        <textarea
-                          rows={6}
-                          value={asset.content}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setAssets(prev => prev.map(item => item.id === asset.id ? { ...item, content: val } : item));
-                          }}
-                          className="w-full bg-transparent text-xs font-mono focus:outline-none text-slate-700 resize-y leading-relaxed"
-                        />
-                      </div>
-
-                      {asset.stageType === 'Conversion' && (
-                        <StripeMockCheckout 
-                          asset={asset}
-                          activeFunnelPrice={currentActiveFunnel?.pricePoint || '$5,000'}
-                          contacts={contacts}
-                          onUpdateContact={(updatedContact) => {
-                            setContacts(prev => prev.map(item => item.id === updatedContact.id ? updatedContact : item));
-                            saveContactToFirestore(updatedContact);
-                          }}
-                          sendWebNotification={sendWebNotification}
-                        />
-                      )}
-
-                      {asset.notes && (
-                        <div className="mt-3 text-xs bg-amber-50 rounded-lg p-2.5 text-amber-800 border border-amber-200/40">
-                          <strong>💡 Optimized Testing Recommendations:</strong>
-                          <p className="mt-1 font-mono whitespace-pre-line text-[11px]">{asset.notes}</p>
+                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/50">
+                          <textarea
+                            rows={6}
+                            value={asset.content}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setAssets(prev => prev.map(item => item.id === asset.id ? { ...item, content: val } : item));
+                            }}
+                            className="w-full bg-transparent text-xs font-mono focus:outline-none text-slate-700 resize-y leading-relaxed"
+                          />
                         </div>
-                      )}
 
-                      <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
-                        <button
-                          onClick={() => {
-                            setSelectedAsset(asset);
-                            setEditingContent(asset.content);
-                            setOptimizationLog([`💬 Context locked. Ready to optimize metrics`]);
-                          }}
-                          className="text-xs bg-amber-400 hover:bg-amber-500 font-bold text-emerald-950 px-4 py-2 rounded-lg flex items-center gap-1.5"
-                        >
-                          <Sparkles className="w-3.5 h-3.5" />
-                          <span>Optimize with Conversion AI</span>
-                        </button>
+                        {asset.stageType === 'Conversion' && (
+                          <StripeMockCheckout 
+                            asset={asset}
+                            activeFunnelPrice={currentActiveFunnel?.pricePoint || '$5,000'}
+                            contacts={contacts}
+                            onUpdateContact={(updatedContact) => {
+                              setContacts(prev => prev.map(item => item.id === updatedContact.id ? updatedContact : item));
+                              saveContactToFirestore(updatedContact);
+                            }}
+                            sendWebNotification={sendWebNotification}
+                          />
+                        )}
 
-                        <button 
-                          onClick={() => {
-                            setAssets(prev => prev.filter(item => item.id !== asset.id));
-                            setLiveAlerts(prev => [`🗑️ Asset "${asset.title}" removed from library`, ...prev]);
-                          }}
-                          className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-all"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {asset.notes && (
+                          <div className="mt-3 text-xs bg-amber-50 rounded-lg p-2.5 text-amber-800 border border-amber-200/40">
+                            <strong>💡 Optimized Testing Recommendations:</strong>
+                            <p className="mt-1 font-mono whitespace-pre-line text-[11px]">{asset.notes}</p>
+                          </div>
+                        )}
+
+                        <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                          <button
+                            onClick={() => {
+                              setSelectedAsset(asset);
+                              setEditingContent(asset.content);
+                              setOptimizationLog([`💬 Context locked. Ready to optimize metrics`]);
+                            }}
+                            className="text-xs bg-amber-400 hover:bg-amber-500 font-bold text-emerald-950 px-4 py-2 rounded-lg flex items-center gap-1.5"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>Optimize with Conversion AI</span>
+                          </button>
+
+                          <button 
+                            onClick={() => {
+                              setAssets(prev => prev.filter(item => item.id !== asset.id));
+                              setLiveAlerts(prev => [`🗑️ Asset "${asset.title}" removed from library`, ...prev]);
+                            }}
+                            className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-
-              </div>
+              ) : (
+                <ABTestManager 
+                  assets={assets}
+                  setAssets={setAssets}
+                  sendWebNotification={sendWebNotification}
+                  setLiveAlerts={setLiveAlerts}
+                />
+              )}
 
             </div>
           )}
@@ -2672,6 +2792,13 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
           {/* TAB 4: CRM LEADS PIPELINE */}
           {activeTab === 'contacts' && (
             <div className="space-y-6">
+              
+              <LeadFlowChart 
+                contacts={contacts}
+                activeContactId={activeContactId}
+                selectedStageFilter={selectedStageFilter}
+                onSelectStageFilter={setSelectedStageFilter}
+              />
               
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
@@ -2759,6 +2886,134 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
                   {/* MAIN SECTION SWITCHER */}
                   {crmDisplayMode === 'ledger' ? (
                     <div className="space-y-3.5">
+                      
+                      {/* BULK OPERATION TOOLBAR */}
+                      <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="checkbox"
+                            checked={filteredContacts.length > 0 && filteredContacts.every(c => selectedContactIds.includes(c.id))}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                // Add all filtered contacts
+                                const newIds = Array.from(new Set([...selectedContactIds, ...filteredContacts.map(c => c.id)]));
+                                setSelectedContactIds(newIds);
+                              } else {
+                                // Remove all filtered contacts
+                                const filteredIds = filteredContacts.map(c => c.id);
+                                setSelectedContactIds(selectedContactIds.filter(id => !filteredIds.includes(id)));
+                              }
+                            }}
+                            className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-slate-300 rounded cursor-pointer"
+                          />
+                          <span className="font-semibold text-slate-700">
+                            {selectedContactIds.length > 0 
+                              ? `Selected ${selectedContactIds.length} of ${contacts.length} leads`
+                              : 'Select All on page'
+                            }
+                          </span>
+                        </div>
+
+                        {selectedContactIds.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-2">
+                            {/* Bulk Change Stage */}
+                            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-xs">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase">Stage:</span>
+                              <select
+                                onChange={(e) => {
+                                  const targetStage = e.target.value as FunnelStageType;
+                                  if (!targetStage) return;
+                                  
+                                  // Update all selected contacts in parents state
+                                  setContacts(prev => prev.map(c => {
+                                    if (selectedContactIds.includes(c.id)) {
+                                      const updated = { ...c, funnelStage: targetStage, lastActivity: new Date().toISOString() };
+                                      saveContactToFirestore(updated);
+                                      return updated;
+                                    }
+                                    return c;
+                                  }));
+
+                                  sendWebNotification("📌 Bulk Stage Changed", `Moved ${selectedContactIds.length} leads to stage: ${targetStage}`);
+                                  setLiveAlerts(prev => [`📌 Bulk stage update: Moved ${selectedContactIds.length} leads to [${targetStage}]`, ...prev]);
+                                  setSelectedContactIds([]);
+                                }}
+                                className="bg-transparent border-none text-xs focus:outline-none focus:ring-0 text-slate-700 font-semibold cursor-pointer"
+                                defaultValue=""
+                              >
+                                <option value="" disabled>Change Stage...</option>
+                                <option value="Awareness">Awareness</option>
+                                <option value="Lead Capture">Lead Capture</option>
+                                <option value="Nurture">Nurture</option>
+                                <option value="Conversion">Conversion</option>
+                                <option value="Retargeting">Retargeting</option>
+                                <option value="Upsell">Upsell</option>
+                                <option value="Retention">Retention</option>
+                              </select>
+                            </div>
+
+                            {/* Bulk Tagging */}
+                            <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-xs">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase">Add Tag:</span>
+                              <input 
+                                type="text"
+                                placeholder="Press Enter..."
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    const val = e.currentTarget.value.trim();
+                                    if (!val) return;
+
+                                    setContacts(prev => prev.map(c => {
+                                      if (selectedContactIds.includes(c.id)) {
+                                        const tags = c.tags || [];
+                                        if (!tags.includes(val)) {
+                                          const updated = { ...c, tags: [...tags, val], lastActivity: new Date().toISOString() };
+                                          saveContactToFirestore(updated);
+                                          return updated;
+                                        }
+                                      }
+                                      return c;
+                                    }));
+
+                                    e.currentTarget.value = '';
+                                    sendWebNotification("🏷️ Bulk Tags Added", `Added tag "${val}" to ${selectedContactIds.length} leads`);
+                                    setLiveAlerts(prev => [`🏷️ Bulk added tag "${val}" to ${selectedContactIds.length} leads`, ...prev]);
+                                    setSelectedContactIds([]);
+                                  }
+                                }}
+                                className="w-24 bg-transparent border-none text-xs focus:outline-none text-slate-700 placeholder:text-slate-300 font-semibold"
+                              />
+                            </div>
+
+                            {/* Bulk Delete */}
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`Are you sure you want to mass-delete all ${selectedContactIds.length} selected leads? This cannot be undone.`)) {
+                                  // Call delete for each
+                                  selectedContactIds.forEach(id => {
+                                    deleteContactFromFirestore(id);
+                                  });
+                                  setLiveAlerts(prev => [`🗑️ Mass deleted ${selectedContactIds.length} leads`, ...prev]);
+                                  sendWebNotification("🗑️ Mass Delete Executed", `Discarded ${selectedContactIds.length} leads successfully`);
+                                  setSelectedContactIds([]);
+                                }
+                              }}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50 bg-white border border-red-100 rounded-xl px-3 py-1.5 font-bold transition-all flex items-center gap-1 shadow-sm"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
+                            </button>
+                            
+                            <button
+                              onClick={() => setSelectedContactIds([])}
+                              className="text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded-xl px-3 py-1.5 font-bold transition-all shadow-sm"
+                            >
+                              Deselect
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
                       {filteredContacts.length === 0 ? (
                         <div className="p-12 text-center text-slate-400 text-xs bg-slate-50 rounded-2xl border border-slate-200 border-dashed">
                           🔍 No prospects found matching specified criteria. Try clearing filters.
@@ -2778,6 +3033,20 @@ ${(generatedData.conversion?.urgencyAngles || []).map((u: string) => `• ${u}`)
                             >
                               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                                 <div className="flex flex-wrap items-center gap-2">
+                                  {/* Individual Selection Checkbox */}
+                                  <input 
+                                    type="checkbox"
+                                    checked={selectedContactIds.includes(c.id)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedContactIds(prev => [...prev, c.id]);
+                                      } else {
+                                        setSelectedContactIds(prev => prev.filter(id => id !== c.id));
+                                      }
+                                    }}
+                                    className="h-3.5 w-3.5 text-emerald-600 focus:ring-emerald-500 border-slate-300 rounded cursor-pointer mr-1"
+                                  />
                                   <span className="text-[10px] font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold uppercase">
                                     {c.funnelStage}
                                   </span>

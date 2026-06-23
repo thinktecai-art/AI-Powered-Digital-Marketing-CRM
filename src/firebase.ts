@@ -7,7 +7,9 @@ import {
   onSnapshot, 
   deleteDoc,
   getDocs,
-  writeBatch
+  writeBatch,
+  query,
+  where
 } from 'firebase/firestore';
 import { 
   getAuth, 
@@ -61,40 +63,90 @@ export async function logoutUser() {
 export { onAuthStateChanged };
 export type { User };
 
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  }
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
 /**
  * Sync Contacts with Firestore in real-time.
- * If Firestore is empty, we seed it with the provided initial contacts.
+ * If Firestore is empty for the user, we seed it with the provided initial contacts.
  */
 export function syncContacts(
+  uid: string,
   onUpdate: (contacts: Contact[]) => void,
   initialContacts: Contact[]
 ) {
   const contactsCol = collection(db, 'contacts');
+  const q = query(contactsCol, where('userId', '==', uid));
 
   // Real-time listener
-  return onSnapshot(contactsCol, async (snapshot) => {
+  return onSnapshot(q, async (snapshot) => {
     if (snapshot.empty) {
-      console.log("Firestore contacts collection is empty. Seeding INITIAL_CONTACTS...");
+      console.log("Firestore contacts collection is empty for user. Seeding INITIAL_CONTACTS...");
       try {
         const batch = writeBatch(db);
         for (const contact of initialContacts) {
-          const contactRef = doc(db, 'contacts', contact.id);
-          batch.set(contactRef, contact);
+          const namespacedId = `${contact.id}-${uid}`;
+          const contactRef = doc(db, 'contacts', namespacedId);
+          batch.set(contactRef, { ...contact, id: namespacedId, userId: uid });
         }
         await batch.commit();
       } catch (err) {
-        console.error("Error seeding initial contacts to Firestore:", err);
+        handleFirestoreError(err, OperationType.WRITE, 'contacts');
       }
     } else {
       const contactsList: Contact[] = [];
       snapshot.forEach((docSnap) => {
         contactsList.push(docSnap.data() as Contact);
       });
-      console.log(`Synced ${contactsList.length} contacts from Firestore.`);
+      console.log(`Synced ${contactsList.length} contacts from Firestore for user ${uid}.`);
       onUpdate(contactsList);
     }
   }, (error) => {
-    console.error("Error in onSnapshot contacts listener:", error);
+    handleFirestoreError(error, OperationType.LIST, 'contacts');
   });
 }
 
@@ -104,9 +156,10 @@ export function syncContacts(
 export async function saveContactToFirestore(contact: Contact) {
   try {
     const contactRef = doc(db, 'contacts', contact.id);
-    await setDoc(contactRef, contact);
+    const uid = auth.currentUser?.uid || 'anonymous';
+    await setDoc(contactRef, { ...contact, userId: uid });
   } catch (error) {
-    console.error("Error saving contact to Firestore:", error);
+    handleFirestoreError(error, OperationType.WRITE, `contacts/${contact.id}`);
   }
 }
 
@@ -118,7 +171,7 @@ export async function deleteContactFromFirestore(contactId: string) {
     const contactRef = doc(db, 'contacts', contactId);
     await deleteDoc(contactRef);
   } catch (error) {
-    console.error("Error deleting contact from Firestore:", error);
+    handleFirestoreError(error, OperationType.DELETE, `contacts/${contactId}`);
   }
 }
 
@@ -126,23 +179,26 @@ export async function deleteContactFromFirestore(contactId: string) {
  * Sync Funnels with Firestore in real-time.
  */
 export function syncFunnels(
+  uid: string,
   onUpdate: (funnels: Funnel[]) => void,
   initialFunnels: Funnel[]
 ) {
   const funnelsCol = collection(db, 'funnels');
+  const q = query(funnelsCol, where('userId', '==', uid));
 
-  return onSnapshot(funnelsCol, async (snapshot) => {
+  return onSnapshot(q, async (snapshot) => {
     if (snapshot.empty) {
-      console.log("Firestore funnels collection is empty. Seeding SEED_FUNNEL...");
+      console.log("Firestore funnels collection is empty for user. Seeding SEED_FUNNEL...");
       try {
         const batch = writeBatch(db);
         for (const funnel of initialFunnels) {
-          const funnelRef = doc(db, 'funnels', funnel.id);
-          batch.set(funnelRef, funnel);
+          const namespacedId = `${funnel.id}-${uid}`;
+          const funnelRef = doc(db, 'funnels', namespacedId);
+          batch.set(funnelRef, { ...funnel, id: namespacedId, userId: uid });
         }
         await batch.commit();
       } catch (err) {
-        console.error("Error seeding initial funnels to Firestore:", err);
+        handleFirestoreError(err, OperationType.WRITE, 'funnels');
       }
     } else {
       const funnelsList: Funnel[] = [];
@@ -152,7 +208,7 @@ export function syncFunnels(
       onUpdate(funnelsList);
     }
   }, (error) => {
-    console.error("Error in onSnapshot funnels listener:", error);
+    handleFirestoreError(error, OperationType.LIST, 'funnels');
   });
 }
 
@@ -162,9 +218,10 @@ export function syncFunnels(
 export async function saveFunnelToFirestore(funnel: Funnel) {
   try {
     const funnelRef = doc(db, 'funnels', funnel.id);
-    await setDoc(funnelRef, funnel);
+    const uid = auth.currentUser?.uid || 'anonymous';
+    await setDoc(funnelRef, { ...funnel, userId: uid });
   } catch (error) {
-    console.error("Error saving funnel to Firestore:", error);
+    handleFirestoreError(error, OperationType.WRITE, `funnels/${funnel.id}`);
   }
 }
 
@@ -183,7 +240,7 @@ export function syncSubscription(
       onUpdate(null);
     }
   }, (error) => {
-    console.error("Error syncing user subscription from Firestore:", error);
+    handleFirestoreError(error, OperationType.GET, `subscriptions/${userId}`);
   });
 }
 
